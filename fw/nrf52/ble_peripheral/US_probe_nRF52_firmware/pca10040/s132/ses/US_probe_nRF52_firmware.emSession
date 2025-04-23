@@ -1,0 +1,78 @@
+<!DOCTYPE CrossStudio_Session_File>
+<session>
+ <Bookmarks/>
+ <Breakpoints groups="Breakpoints" active_group="Breakpoints">
+  <Exceptions set="MemManage;UsageFault_Coprocessor;UsageFault_CheckingError;UsageFault_StateError;BusFault;ExceptionEntryReturnFault;HardFault"/>
+ </Breakpoints>
+ <ExecutionProfileWindow/>
+ <FrameBufferWindow>
+  <FrameBufferWindow bufferHeight="-1" addressSpace="" addressText="" bufferWidth="-1"/>
+ </FrameBufferWindow>
+ <Memory1>
+  <MemoryWindow addressSpace="" dataSize="1" autoEvaluate="0" viewMode="0" addressOrder="0" columnsText="" refreshPeriod="0" name="US_probe_nRF52_firmware" radix="16" sizeText="" addressText=""/>
+ </Memory1>
+ <Memory2>
+  <MemoryWindow addressSpace="" dataSize="1" autoEvaluate="0" viewMode="0" addressOrder="0" columnsText="" refreshPeriod="0" name="US_probe_nRF52_firmware" radix="16" sizeText="" addressText=""/>
+ </Memory2>
+ <Memory3>
+  <MemoryWindow addressSpace="" dataSize="1" autoEvaluate="0" viewMode="0" addressOrder="0" columnsText="" refreshPeriod="0" name="US_probe_nRF52_firmware" radix="16" sizeText="" addressText=""/>
+ </Memory3>
+ <Memory4>
+  <MemoryWindow addressSpace="" dataSize="1" autoEvaluate="0" viewMode="0" addressOrder="0" columnsText="" refreshPeriod="0" name="US_probe_nRF52_firmware" radix="16" sizeText="" addressText=""/>
+ </Memory4>
+ <Project>
+  <ProjectSessionItem path="US_probe_nRF52_firmware"/>
+  <ProjectSessionItem path="US_probe_nRF52_firmware;US_probe_nRF52_firmware"/>
+  <ProjectSessionItem path="US_probe_nRF52_firmware;US_probe_nRF52_firmware;Application"/>
+  <ProjectSessionItem path="US_probe_nRF52_firmware;US_probe_nRF52_firmware;nRF_Drivers"/>
+  <ProjectSessionItem path="US_probe_nRF52_firmware;US_probe_nRF52_firmware;nRF_Libraries"/>
+ </Project>
+ <Register1>
+  <RegisterWindow visibleNodes="CPU - Current Context/r0;CPU - Current Context/r1;CPU - Current Context/r2;CPU - Current Context/r3;CPU - Current Context/r4;CPU - Current Context/r5;CPU - Current Context/r6;CPU - Current Context/r7;CPU - Current Context/r8;CPU - Current Context/r9;CPU - Current Context/r10;CPU - Current Context/r11;CPU - Current Context/r12;CPU - Current Context/sp(r13);CPU - Current Context/lr(r14);CPU - Current Context/pc(r15);CPU - Current Context/apsr;CPU/r0;CPU/r1;CPU/r2;CPU/r3;CPU/r4;CPU/r5;CPU/r6;CPU/r7;CPU/r8;CPU/r9;CPU/r10;CPU/r11;CPU/r12;CPU/sp(r13);CPU/lr(r14);CPU/pc(r15);CPU/xpsr;CPU/MSP;CPU/PSP;CPU/PRIMASK;CPU/BASEPRI;CPU/FAULTMASK;CPU/CONTROL;CPU/internal" binaryNodes="" asciiNodes="" openNodes="CPU - Current Context" name="US_probe_nRF52_firmware" decimalNodes="" octalNodes="" unsignedNodes=""/>
+ </Register1>
+ <Register2>
+  <RegisterWindow visibleNodes="CPU - Current Context/r0;CPU - Current Context/r1;CPU - Current Context/r2;CPU - Current Context/r3;CPU - Current Context/r4;CPU - Current Context/r5;CPU - Current Context/r6;CPU - Current Context/r7;CPU - Current Context/r8;CPU - Current Context/r9;CPU - Current Context/r10;CPU - Current Context/r11;CPU - Current Context/r12;CPU - Current Context/sp(r13);CPU - Current Context/lr(r14);CPU - Current Context/pc(r15);CPU - Current Context/apsr;CPU/r0;CPU/r1;CPU/r2;CPU/r3;CPU/r4;CPU/r5;CPU/r6;CPU/r7;CPU/r8;CPU/r9;CPU/r10;CPU/r11;CPU/r12;CPU/sp(r13);CPU/lr(r14);CPU/pc(r15);CPU/xpsr;CPU/MSP;CPU/PSP;CPU/PRIMASK;CPU/BASEPRI;CPU/FAULTMASK;CPU/CONTROL;CPU/internal" binaryNodes="" asciiNodes="" openNodes="CPU - Current Context" name="US_probe_nRF52_firmware" decimalNodes="" octalNodes="" unsignedNodes=""/>
+ </Register2>
+ <Register3>
+  <RegisterWindow visibleNodes="CPU - Current Context/r0;CPU - Current Context/r1;CPU - Current Context/r2;CPU - Current Context/r3;CPU - Current Context/r4;CPU - Current Context/r5;CPU - Current Context/r6;CPU - Current Context/r7;CPU - Current Context/r8;CPU - Current Context/r9;CPU - Current Context/r10;CPU - Current Context/r11;CPU - Current Context/r12;CPU - Current Context/sp(r13);CPU - Current Context/lr(r14);CPU - Current Context/pc(r15);CPU - Current Context/apsr;CPU/r0;CPU/r1;CPU/r2;CPU/r3;CPU/r4;CPU/r5;CPU/r6;CPU/r7;CPU/r8;CPU/r9;CPU/r10;CPU/r11;CPU/r12;CPU/sp(r13);CPU/lr(r14);CPU/pc(r15);CPU/xpsr;CPU/MSP;CPU/PSP;CPU/PRIMASK;CPU/BASEPRI;CPU/FAULTMASK;CPU/CONTROL;CPU/internal" binaryNodes="" asciiNodes="" openNodes="CPU - Current Context" name="US_probe_nRF52_firmware" decimalNodes="" octalNodes="" unsignedNodes=""/>
+ </Register3>
+ <Register4>
+  <RegisterWindow visibleNodes="CPU - Current Context/r0;CPU - Current Context/r1;CPU - Current Context/r2;CPU - Current Context/r3;CPU - Current Context/r4;CPU - Current Context/r5;CPU - Current Context/r6;CPU - Current Context/r7;CPU - Current Context/r8;CPU - Current Context/r9;CPU - Current Context/r10;CPU - Current Context/r11;CPU - Current Context/r12;CPU - Current Context/sp(r13);CPU - Current Context/lr(r14);CPU - Current Context/pc(r15);CPU - Current Context/apsr;CPU/r0;CPU/r1;CPU/r2;CPU/r3;CPU/r4;CPU/r5;CPU/r6;CPU/r7;CPU/r8;CPU/r9;CPU/r10;CPU/r11;CPU/r12;CPU/sp(r13);CPU/lr(r14);CPU/pc(r15);CPU/xpsr;CPU/MSP;CPU/PSP;CPU/PRIMASK;CPU/BASEPRI;CPU/FAULTMASK;CPU/CONTROL;CPU/internal" binaryNodes="" asciiNodes="" openNodes="CPU - Current Context" name="US_probe_nRF52_firmware" decimalNodes="" octalNodes="" unsignedNodes=""/>
+ </Register4>
+ <Threads>
+  <ThreadsWindow showLists=""/>
+ </Threads>
+ <TraceWindow>
+  <Trace enabled="Yes"/>
+ </TraceWindow>
+ <Watch1>
+  <Watches active="1" update="Never"/>
+ </Watch1>
+ <Watch2>
+  <Watches active="0" update="Never"/>
+ </Watch2>
+ <Watch3>
+  <Watches active="0" update="Never"/>
+ </Watch3>
+ <Watch4>
+  <Watches active="0" update="Never"/>
+ </Watch4>
+ <Files>
+  <SessionOpenFile windowGroup="DockEditLeft" x="38" y="327" useTextEdit="1" openedFrom="C:/Users/s-fre/Downloads/nRF5_SDK_17.1.0_ddde560/examples/ble_peripheral/US_probe_nRF52_firmware/us_spi.c" useBinaryEdit="0" left="0" path="../../../us_ble.c" selected="0" top="369" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="12" y="141" useTextEdit="1" openedFrom="C:/Users/s-fre/Downloads/nRF5_SDK_17.1.0_ddde560/examples/ble_peripheral/US_probe_nRF52_firmware/us_ble.c" useBinaryEdit="0" left="0" path="../../../main.c" selected="1" top="188" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="45" y="13" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../us_ble.h" selected="0" top="15" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="14" y="36" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../us_spi.h" selected="0" top="0" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="32" y="110" useTextEdit="1" openedFrom="C:/Users/serge/Downloads/nRF5_SDK_17.1.0_ddde560/nRF5_SDK_17.1.0_ddde560/examples/ble_peripheral/US_probe_nRF52_firmware/us_spi.h" useBinaryEdit="0" left="0" path="../../../us_spi.c" selected="0" top="103" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="12" y="52" useTextEdit="1" openedFrom="C:/Users/serge/Downloads/nRF5_SDK_17.1.0_ddde560/nRF5_SDK_17.1.0_ddde560/examples/ble_peripheral/US_probe_nRF52_firmware/us_spi.c" useBinaryEdit="0" left="0" path="../../../us_defines.h" selected="0" top="61" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="99" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/util/app_error_weak.c" selected="0" top="75" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="18" y="230" useTextEdit="1" openedFrom="C:/Users/s-fre/Downloads/nRF5_SDK_17.1.0_ddde560/examples/ble_peripheral/US_probe_nRF52_firmware/us_ble.c" useBinaryEdit="0" left="0" path="../../../../../../components/ble/ble_services/ble_nus/ble_nus.c" selected="0" top="221" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="36" y="284" useTextEdit="1" openedFrom="C:/Users/serge/Downloads/nRF5_SDK_17.1.0_ddde560/nRF5_SDK_17.1.0_ddde560/integration/nrfx/legacy/nrf_drv_spi.c" useBinaryEdit="0" left="0" path="../../../../../../modules/nrfx/drivers/src/nrfx_spim.c" selected="0" top="263" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="32" y="98" useTextEdit="1" openedFrom="C:/Users/s-fre/Downloads/nRF5_SDK_17.1.0_ddde560/examples/ble_peripheral/US_probe_nRF52_firmware/us_ble.c" useBinaryEdit="0" left="0" path="../../../../../../integration/nrfx/legacy/nrf_drv_gpiote.h" selected="0" top="73" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="40" y="11545" useTextEdit="1" openedFrom="" useBinaryEdit="0" left="0" path="../config/sdk_config.h" selected="0" top="11527" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="18" y="147" useTextEdit="1" openedFrom="C:/Users/s-fre/Downloads/nRF5_SDK_17.1.0_ddde560/examples/ble_peripheral/US_probe_nRF52_firmware/us_spi.c" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/util/app_error.h" selected="0" top="137" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="5" y="46" useTextEdit="1" openedFrom="C:/Users/s-fre/Downloads/nRF5_SDK_17.1.0_ddde560/components/libraries/util/app_error.h" useBinaryEdit="0" left="0" path="../../../../../../components/libraries/util/app_error_handler_gcc.c" selected="0" top="0" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="43" y="158" useTextEdit="1" openedFrom="C:/Users/serge/Downloads/nRF5_SDK_17.1.0_ddde560/nRF5_SDK_17.1.0_ddde560/examples/ble_peripheral/US_probe_nRF52_firmware/us_spi.c" useBinaryEdit="0" left="0" path="../../../../../../integration/nrfx/legacy/nrf_drv_spi.h" selected="0" top="147" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="25" y="120" useTextEdit="1" openedFrom="C:/Users/serge/Downloads/nRF5_SDK_17.1.0_ddde560/nRF5_SDK_17.1.0_ddde560/examples/ble_peripheral/US_probe_nRF52_firmware/us_spi.c" useBinaryEdit="0" left="0" path="../../../../../../integration/nrfx/legacy/nrf_drv_spi.c" selected="0" top="109" codecName="Default"/>
+ </Files>
+ <ARMCrossStudioWindow activeProject="US_probe_nRF52_firmware" fileDialogDefaultFilter="*.c" autoConnectTarget="J-Link" buildConfiguration="Debug" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="" debugSearchPath="" autoConnectCapabilities="3199"/>
+</session>

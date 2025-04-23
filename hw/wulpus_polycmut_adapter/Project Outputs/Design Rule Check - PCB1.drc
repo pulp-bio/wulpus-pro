@@ -1,0 +1,106 @@
+Protel Design System Design Rule Check
+PCB File : C:\Users\Public\Documents\Altium\wulpus_testbench_polycmut_flexypin\PCB1.PcbDoc
+Date     : 10.01.2025
+Time     : 10:23:01
+
+Processing Rule : Clearance Constraint (Gap=0.254mm) (All),(All)
+Rule Violations :0
+
+Processing Rule : Short-Circuit Constraint (Allowed=No) (All),(All)
+Rule Violations :0
+
+Processing Rule : Un-Routed Net Constraint ( (All) )
+Rule Violations :0
+
+Processing Rule : Modified Polygon (Allow modified: No), (Allow shelved: No)
+Rule Violations :0
+
+Processing Rule : Width Constraint (Min=0.2mm) (Max=1mm) (Preferred=0.2mm) (All)
+Rule Violations :0
+
+Processing Rule : Width Constraint (Min=0.2mm) (Max=0.254mm) (Preferred=0.2mm) (All)
+Rule Violations :0
+
+Processing Rule : Routing Layers(All)
+Rule Violations :0
+
+Processing Rule : Routing Via (MinHoleWidth=0.2mm) (MaxHoleWidth=0.6mm) (PreferredHoleWidth=0.2mm) (MinWidth=0.4mm) (MaxWidth=0.8mm) (PreferedWidth=0.4mm) (All)
+Rule Violations :0
+
+Processing Rule : Routing Via (MinHoleWidth=0.3mm) (MaxHoleWidth=0.3mm) (PreferredHoleWidth=0.3mm) (MinWidth=0.6mm) (MaxWidth=0.6mm) (PreferedWidth=0.6mm) (All)
+Rule Violations :0
+
+Processing Rule : Differential Pairs Uncoupled Length using the Gap Constraints (Min=0.254mm) (Max=0.254mm) (Prefered=0.254mm)  and Width Constraints (Min=0.381mm) (Max=0.381mm) (Prefered=0.381mm) (All)
+Rule Violations :0
+
+Processing Rule : SMD Neck-Down Constraint (Percent=100%) (All)
+Rule Violations :0
+
+Processing Rule : Power Plane Connect Rule(Direct Connect )(Expansion=0.508mm) (Conductor Width=0.254mm) (Air Gap=0.254mm) (Entries=2) (All)
+Rule Violations :0
+
+Processing Rule : Minimum Annular Ring (Minimum=0.13mm) (All)
+Rule Violations :0
+
+Processing Rule : Hole Size Constraint (Min=0.15mm) (Max=7.62mm) (All)
+Rule Violations :0
+
+Processing Rule : Pads and Vias to follow the Drill pairs settings
+Rule Violations :0
+
+Processing Rule : Hole To Hole Clearance (Gap=0.254mm) (All),(All)
+Rule Violations :0
+
+Processing Rule : Minimum Solder Mask Sliver (Gap=0.1mm) (All),(All)
+   Violation between Minimum Solder Mask Sliver Constraint: (0.009mm < 0.1mm) Between Pad J3-(17.526mm,-16.1mm) on Multi-Layer And Region (0 hole(s)) Bottom Solder [Bottom Solder] Mask Sliver [0.009mm]
+   Violation between Minimum Solder Mask Sliver Constraint: (0.009mm < 0.1mm) Between Pad J3-(-17.526mm,-16.1mm) on Multi-Layer And Region (0 hole(s)) Bottom Solder [Bottom Solder] Mask Sliver [0.009mm]
+   Violation between Minimum Solder Mask Sliver Constraint: (0.009mm < 0.1mm) Between Pad J4-(17.526mm,16.1mm) on Multi-Layer And Region (0 hole(s)) Bottom Solder [Bottom Solder] Mask Sliver [0.009mm]
+   Violation between Minimum Solder Mask Sliver Constraint: (0.009mm < 0.1mm) Between Pad J4-(-17.526mm,16.1mm) on Multi-Layer And Region (0 hole(s)) Bottom Solder [Bottom Solder] Mask Sliver [0.009mm]
+   Violation between Minimum Solder Mask Sliver Constraint: (0.05mm < 0.1mm) Between Pad R1-1(3.425mm,-8.75mm) on Top Layer And Pad R1-2(2.575mm,-8.75mm) on Top Layer [Top Solder] Mask Sliver [0.05mm]
+   Violation between Minimum Solder Mask Sliver Constraint: (0.05mm < 0.1mm) Between Pad R2-1(3.425mm,8.75mm) on Top Layer And Pad R2-2(2.575mm,8.75mm) on Top Layer [Top Solder] Mask Sliver [0.05mm]
+   Violation between Minimum Solder Mask Sliver Constraint: (0.05mm < 0.1mm) Between Pad R3-1(1.425mm,-8.75mm) on Top Layer And Pad R3-2(0.575mm,-8.75mm) on Top Layer [Top Solder] Mask Sliver [0.05mm]
+   Violation between Minimum Solder Mask Sliver Constraint: (0.05mm < 0.1mm) Between Pad R4-1(1.425mm,8.75mm) on Top Layer And Pad R4-2(0.575mm,8.75mm) on Top Layer [Top Solder] Mask Sliver [0.05mm]
+   Violation between Minimum Solder Mask Sliver Constraint: (0.05mm < 0.1mm) Between Pad R5-1(-0.575mm,-8.75mm) on Top Layer And Pad R5-2(-1.425mm,-8.75mm) on Top Layer [Top Solder] Mask Sliver [0.05mm]
+   Violation between Minimum Solder Mask Sliver Constraint: (0.05mm < 0.1mm) Between Pad R6-1(-0.575mm,8.75mm) on Top Layer And Pad R6-2(-1.425mm,8.75mm) on Top Layer [Top Solder] Mask Sliver [0.05mm]
+   Violation between Minimum Solder Mask Sliver Constraint: (0.05mm < 0.1mm) Between Pad R7-1(-2.575mm,-8.75mm) on Top Layer And Pad R7-2(-3.425mm,-8.75mm) on Top Layer [Top Solder] Mask Sliver [0.05mm]
+   Violation between Minimum Solder Mask Sliver Constraint: (0.05mm < 0.1mm) Between Pad R8-1(-2.575mm,8.75mm) on Top Layer And Pad R8-2(-3.425mm,8.75mm) on Top Layer [Top Solder] Mask Sliver [0.05mm]
+Rule Violations :12
+
+Processing Rule : Silk To Solder Mask (Clearance=0.254mm) (IsPad),(All)
+Rule Violations :0
+
+Processing Rule : Silk to Silk (Clearance=0.254mm) (All),(All)
+Rule Violations :0
+
+Processing Rule : Net Antennae (Tolerance=0mm) (All)
+Rule Violations :0
+
+Processing Rule : Board Clearance Constraint (Gap=0mm) (All)
+Rule Violations :0
+
+Processing Rule : Room Sheet1 (Bounding Region = (163.186mm, 87.046mm, 214.786mm, 137.946mm) (InComponentClass('Sheet1'))
+Rule Violations :0
+
+Processing Rule : Component Clearance Constraint ( Horizontal Gap = 0.254mm, Vertical Gap = 0.254mm ) (All),(All) 
+Rule Violations :0
+
+Processing Rule : Height Constraint (Min=0mm) (Max=25.4mm) (Prefered=12.7mm) (All)
+Rule Violations :0
+
+Waived Violations Of Rule : Un-Routed Net Constraint ( (All) )
+   Waived Violation between Un-Routed Net Constraint: Region (0 hole(s)) Top Layer Dead Copper - Net Not Assigned.Waived by Cédric Hirschi at 10.01.2025 10:13:10Logo
+   Waived Violation between Un-Routed Net Constraint: Region (0 hole(s)) Top Layer Dead Copper - Net Not Assigned.Waived by Cédric Hirschi at 10.01.2025 10:13:26Logo
+   Waived Violation between Un-Routed Net Constraint: Region (0 hole(s)) Top Layer Dead Copper - Net Not Assigned.Waived by Cédric Hirschi at 10.01.2025 10:13:04Logo
+   Waived Violation between Un-Routed Net Constraint: Region (0 hole(s)) Top Layer Dead Copper - Net Not Assigned.Waived by Cédric Hirschi at 10.01.2025 10:13:31Logo
+   Waived Violation between Un-Routed Net Constraint: Region (0 hole(s)) Top Layer Dead Copper - Net Not Assigned.Waived by Cédric Hirschi at 10.01.2025 10:13:14Logo
+   Waived Violation between Un-Routed Net Constraint: Region (0 hole(s)) Top Layer Dead Copper - Net Not Assigned.Waived by Cédric Hirschi at 10.01.2025 10:12:59Logo
+   Waived Violation between Un-Routed Net Constraint: Region (0 hole(s)) Top Layer Dead Copper - Net Not Assigned.Waived by Cédric Hirschi at 10.01.2025 10:13:36Logo
+   Waived Violation between Un-Routed Net Constraint: Region (0 hole(s)) Top Layer Dead Copper - Net Not Assigned.Waived by Cédric Hirschi at 10.01.2025 10:12:44Logo
+   Waived Violation between Un-Routed Net Constraint: Region (0 hole(s)) Top Layer Dead Copper - Net Not Assigned.Waived by Cédric Hirschi at 10.01.2025 10:13:41Logo
+   Waived Violation between Un-Routed Net Constraint: Region (0 hole(s)) Top Layer Dead Copper - Net Not Assigned.Waived by Cédric Hirschi at 10.01.2025 10:13:20Logo
+Waived Violations :10
+
+
+Violations Detected : 12
+Waived Violations : 10
+Time Elapsed        : 00:00:02

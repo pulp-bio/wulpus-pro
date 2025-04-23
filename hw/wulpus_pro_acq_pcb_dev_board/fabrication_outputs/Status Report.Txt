@@ -1,0 +1,10 @@
+Output: Bill of Materials
+Type  : BOM
+From  : Variant [pzt_hia_no_bias] of Project [wulpus_pro_acq_pcb.PrjPcb]
+   Generated File[Bill of Materials-wulpus_pro_acq_pcb(pzt_hia_no_bias).xlsx]
+
+
+Files Generated   : 1
+Documents Printed : 0
+
+Finished Output Generation At 16:52:41 On 20/02/2025

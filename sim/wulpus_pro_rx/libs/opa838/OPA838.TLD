@@ -1,0 +1,3 @@
+Texas Instruments
+SUBCKT OPA838          VOUT VS- VIN+ VIN- PDBAR VS+  Texas:OPA838  [OpAmp] 
+LOCKED S2Q=

@@ -1,0 +1,26 @@
+Version 4
+SymbolType BLOCK
+RECTANGLE Normal -80 -56 96 56
+WINDOW 0 8 -56 Bottom 2
+WINDOW 3 8 56 Top 2
+SYMATTR Prefix X
+SYMATTR Value OPA837
+SYMATTR ModelFile C:\Users\serge\Documents\LTspice\wulpus_pro_rx\libs\opa837\OPA837.LIB
+PIN -80 32 LEFT 8
+PINATTR PinName VS-
+PINATTR SpiceOrder 1
+PIN 96 32 RIGHT 8
+PINATTR PinName VS+
+PINATTR SpiceOrder 2
+PIN -80 -32 LEFT 8
+PINATTR PinName VIN-
+PINATTR SpiceOrder 3
+PIN -80 0 LEFT 8
+PINATTR PinName VIN+
+PINATTR SpiceOrder 4
+PIN 96 -32 RIGHT 8
+PINATTR PinName VOUT
+PINATTR SpiceOrder 5
+PIN 96 0 RIGHT 8
+PINATTR PinName PDBAR
+PINATTR SpiceOrder 6

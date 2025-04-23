@@ -1,0 +1,86 @@
+* AD8338 SPICE Model
+* Description: Linear-in-dB 80dB Variable Gain Amplifier
+* Developed by: ADI
+* Revision History: 08/13/2013 
+* 1.0 (08/2013)
+* Copyright 2013 by Analog Devices, Inc.
+*
+* Refer to http://www.analog.com/Analog_Root/static/techSupport/designTools/spiceModels/license/spice_general.html for License Statement.  Use of this model
+* indicates your acceptance with the terms and provisions in the License Statement.
+*
+* BEGIN Notes:
+*
+*
+* Parameters modeled include:
+*     Gain bandwidth product
+*     Internal 1.5V reference
+*     A Gain control pin, configured for cases where MODE=HIGH (increasing gain with increasing voltage)
+*     Sensitivity to different input resistors for Gain or attenuation
+*     slew rate and step response performance
+*     Sensitivity to feedback resistors
+*     Noise with respect to input resistors
+*
+* Parameters not explicitly modeled:
+*	Offset Nulling Circuit
+*	MODE control (increasing, or decreasing gain with increasing voltage)
+*	AGC/DetectorOut 
+*
+* END Notes
+*
+* Node assignments
+*                	Non inverting input, with 500ohm internal resistor
+*                	|    	Non inverting input, direct
+*					|		|		Inverting input, direct
+*					|		|		|		Inverting Input, with 500ohm internal resistor
+*					|		|		|		|		Signal common/ground
+*					|		|		|		|		|		Gain control pin 
+*					|		|		|		|		|		|		Feedback pin (inverting output)
+*					|		|		|		|		|		|		|		Inverting output
+*					|		|		|		|		|		|		|		|		Non-inverting output
+*					|		|		|		|		|		|		|		|		|		Feedback pin (non-inverting)
+*					|		|		|		|		|		|		|		|		|		|		Supply pin (3-5V)
+*					|		|		|		|		|		|		|		|		|		|		|		Reference output, 1.5V
+.SUBCKT AD8338   	INPR 	INPD 	INMD 	INMR 	COMM 	GAIN 	FBKM 	OUTM 	OUTP 	FBKP 	VBAT 	VREF
+*Reference
+V100	VREF	0	1.500
+
+*Input stage
+R001 	INPR	INPD	500
+R002	INMR	INMD	500
+VSENS1	INPD	VREF	0
+VSENS2	VREF	INMD	0
+
+*Differential to single-ended
+F001	0		VSUM	VSENS1 0.05
+F002	0		VSUM	VSENS2 0.05
+R010	VSUM	0	10e3
+
+*Gain scaling
+BGAIN	VGAINOUT	0	V=PWR(10,4*(V(GAIN)-0.1))*V(VSUM)
+R020	VGAINOUT	0	1e9
+
+*Slewing circuit
+BSLEW	VSLEW 0 I=(-1)*LIMIT((V(VGAINOUT)-V(VSLEW)),0.002,-0.002)
+C010	VSLEW	0	10e-12
+
+
+*Gainbandwidth limiting
+G001	0		VPRE	VSLEW	0	-0.05
+R040	VPRE	0		20
+C050	VPRE	0		442e-12
+
+BCLAMP	VLIMIT	0	V=LIMIT(V(VPRE), 1.55, -1.55)
+
+*Output Transimpedance Amplifier 
+G010	0		FBKP	VLIMIT	0	0.052631e-3
+G011	FBKM	0		VLIMIT	0	0.052631e-3
+E100	OUTP	0		VREF	FBKP	1e5
+E101	OUTM	0		VREF	FBKM	1e5
+R099	OUTP	FBKP	9500
+R098	OUTM	FBKM	9500
+*supply current
+BMEAS	VBAT	0	I=(V(GAIN)-0.6)*(V(GAIN)-0.6)*0.012+0.003
+
+.MODEL DGeneric D	Is=1e-15
+
+.ends

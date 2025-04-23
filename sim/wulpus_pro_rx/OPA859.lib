@@ -1,0 +1,585 @@
+* OPA859
+*****************************************************************************
+* (C) Copyright 2018 Texas Instruments Incorporated. All rights reserved.
+*****************************************************************************
+** This model is designed as an aid for customers of Texas Instruments.
+** TI and its licensors and suppliers make no warranties, either expressed
+** or implied, with respect to this model, including the warranties of 
+** merchantability or fitness for a particular purpose.  The model is
+** provided solely on an "as is" basis.  The entire risk as to its quality
+** and performance is with the customer.
+*****************************************************************************
+*
+** Released by: Texas Instruments Inc.
+* Part: OPA859
+* Date: 07/24/2018
+* Model Type: All In One
+* Simulator: PSPICE 
+* Simulator Version: 17.2
+* EVM Order Number: N/A 
+* EVM Users Guide:  N/A 
+* Datasheet: N/A
+*
+* Model Version: 1.0
+*
+*****************************************************************************
+*
+* Updates:
+*
+* Version 1.0 : Release to Web
+*
+*****************************************************************************
+* The following parameters are modeled: 
+* Input Offset Voltage, Input Bias Current, VIH/VIL, DC CMRR,
+* small signal freq response, Input Referred Voltage Noise, 
+* Input Referred Current Noise, Slew Rate,
+* Short Circuit Output Current, VOH/VOL, VOH/VOL vs. Output Current
+* Iq_on, Iq_off, PSRR
+*****************************************************************************
+
+
+
+
+.SUBCKT OPA859 INP INN VCC VEE OUT PD
+XU1         VCC VEE PD OUT INP INN VFA_HT6_0
+.ENDS
+
+.SUBCKT VFA_HT6_0 VCC VEE PD VOUT Vinp Vinm
+Vprobe2     HighZ net41 0
+VDomPoleBias net32 0 0
+Vprobe1     net31 HighZ 0
+XI30        net71 VOUT Power VCC_INT VEE_INT VEE VCC OutputCir_0
+XI52        Vinp_int Vinm_int net32 net31 VEE_INT VCC_INT Power GMITAIL_0
++ PARAMS: CHOICE=1 GM=4.668M SBF=1 ITAILMAX_X1={3.0} ITAILMAX_Y1={1.081M}
++ ITAILMAX_X2={5.0} ITAILMAX_Y2={1.081M} ITAILMIN_X1={3.0}
++ ITAILMIN_Y1={0.93M} ITAILMIN_X2={5.0} ITAILMIN_Y2={0.93M}
+XI60        Vinp_int Vinm_int IBIAS_0
++ PARAMS: CHOICE=1 IBIAS={28.94F-3P} IOFFSET={0.726F+0.5F} TA=27 IBIASDRIFT=299F
++ IOFFSETDRIFT=0.540F IBIASP=1F IBIASM=1F
+XI56        VCC_INT net22 Vinm_int VEE_INT Vinrange1_0
+XI54        VCC_INT net21 Vinp_int VEE_INT Vinrange1_0
+XI21        25 net22 25 CMRR_0
++ PARAMS: CMRR_DC=-113 CMRR_F3DB=1230K CMRR_F3DB_FUDGEFACTOR=1 
+XI19        VCC_INT VEE_INT net2 25 PSRR_0
++ PARAMS: PSRRP_DC=-97 PSRRP_F3DB=100K PSRRN_DC=-79.56 PSRRN_F3DB=90K 
+XI59        net21 net11 VINOFFSET_0
++ PARAMS: TA=27 VOS=78.89U DRIFT=1.26U 
+XI18        net11 0 INOISE_0
++ PARAMS: X={0.1M} Y={432F} Z={4.32F} 
+XI63        net2 0 INOISE_0
++ PARAMS: X={0.1M} Y={432F} Z={4.32F} 
+XI17        net1 net11 VNOISE_0
++ PARAMS: X={1} Y={1210N} Z={3.03N} 
+XI53        Vinp Vinm net1 net2 Zin_0
+XINV1       PDinv Power VCC_INT VEE_INT HPA_INV_IDEAL_0
+XINV3       PD PDinv VCC_INT VEE_INT HPA_INV_IDEAL_0
+R14         VCC_INT PD 10MEG 
+XI28        VCC_INT net41 NET51 VEE_INT RecoveryCircuit_0
+XI40        VCC VEE Power VEE_INT VCC_INT IQ_0
++ PARAMS: IOFF={66.59U} ION_X1={0.0} ION_Y1={20.21M} ION_X2={1.6}
++ ION_Y2={20.21M} ION_X3={1.9} ION_Y3={20.21M} ION_X4={12.0}
++ ION_Y4={20.21M}
+EVCVS2      VEE_INT 0 VEE 0  1
+EVCVS1      VCC_INT 0 VCC 0  1
+XI85        0 0 net71 net61 PhaseDelay_0
+XI26        0 NET51 net61 NonDomPole_0
+XI56_2      net32 HighZ 0 DomPole_0
+.ENDS
+
+.SUBCKT OutputCir_0 Vin Vout PD VCC VEE VEEmain VCCmain
+Vprobe4     43 38 0
+VProbe3     45 VOH 0
+Rout        35 36 10.2 
+Lout2       37 38 1P  
+RBYP        36 37 100 
+Cp2         39 0 975F 
+Rp2         38 39 1M 
+Lout1       36 37 825P  
+RVIMONINV   VIMONINV 0 1G 
+VCurSinkDetect_in Vout 40
+HCurSinkDetect VIMONINV 0 VCurSinkDetect_in 1
+RVIMON      VIMON 0 1G 
+VCurSourceDetect_in 38 40
+HCurSourceDetect VIMON 0 VCurSourceDetect_in 1
+XIVOL       VOL VEE VIMONINV OUTPUTCIR_VOHVOL_0
+XIVOH       VCC VOH VIMON OUTPUTCIR_VOHVOL_1
+XI15        43 VOL DIODEIDEAL_0
+Routminor   44 36 16.5 
+Cout        35 44 5N 
+XU1         VCCmain VEEmain VIMON PD OUTPUTCIR_ILOAD_0
+XI14        45 38 DIODEIDEAL_0
+EVCVS1      35 0 Vin 0  1
+.ENDS
+
+
+.SUBCKT Vinrange1_0 VCC Vin Vout VEE
+VIL         57 VEE -250M
+VIH         VCC 58 1.25
+V0          56 Vout 0
+XIDVIL      56 57 DIODEIDEAL_0
+XIDVIH      58 56 DIODEIDEAL_0
+R0          Vin 56 1M 
+.ENDS
+
+
+.SUBCKT Zin_0 in1 in2 out1 out2
+GR2         out2 0 out2 0  8P
+R5          in2 out2 100M 
+C2          0 out2 620F 
+GR3         out1 out2 out1 out2  8P
+GR1         0 out1 0 out1  8P
+C3          out2 out1 200F 
+C1          out1 0 620F 
+R4          in1 out1 100M 
+.ENDS
+
+
+.SUBCKT RecoveryCircuit_0 VCC A B VEE
+Vbridge     95 A 0
+Vprobe      A B 0
+VRecL       96 VEE -200
+VRecH       VCC 97 -200
+XIDVIL      95 96 DIODEIDEAL_0
+XIDVIH      97 95 DIODEIDEAL_0
+.ENDS
+
+
+.SUBCKT PhaseDelay_0 A B Vout Vin
+R6          105 A 1K 
+L1          Vout 105 50N  
+GVCCS1      A Vout 106 A  1M
+R4          107 A 1G 
+C1          108 A 1F 
+R3          107 108 1M 
+EVCVS1      109 A Vin A  1
+R2          106 A 190 
+C2          110 A 1P 
+R5          106 110 1M 
+L0          107 106 1N  
+R1          109 107 1M 
+.ENDS
+
+
+.SUBCKT NonDomPole_0 C Vin Vout
+EVCVS1      111 C Vin C  1
+R3          Vout C 1G 
+C1          112 C 126.5P 
+R2          Vout 112 1M 
+L0          113 Vout 1P  
+R1          111 113 1 
+.ENDS
+
+
+.SUBCKT DomPole_0 B A C
+C1          A B 714F 
+R1          A B 479.6K 
+C2          114 C 1F 
+R2          A 114 1M 
+.ENDS
+
+
+
+
+.SUBCKT GMITAIL_0   VINP VINM IOUTP IOUTM VEE VCC PD PARAMS:
++ CHOICE  = 2
+
++ GM          = 3.77E-2
++ SBF  = 1 
+
++ ITAILMAX_X1  = { 3.0 }
++ ITAILMAX_Y1  = { 10M }
+
++ ITAILMAX_X2  = { 5.0 }
++ ITAILMAX_Y2  = { 10M }
+
++ ITAILMIN_X1  = { 3.0 }
++ ITAILMIN_Y1  = { 10M }
+
++ ITAILMIN_X2  = { 5.0 }
++ ITAILMIN_Y2  = { 10M }
+
+
+
+.PARAM CHOICE1   = { IF ( CHOICE == 1,  1, 0 ) }
+.PARAM CHOICE2   = { IF ( CHOICE == 2,  1, 0 ) }
+.PARAM CHOICE3  = { IF ( CHOICE == 3,  1, 0 ) }
+.PARAM CHOICE11  = { IF ( CHOICE == 11, 1, 0 ) }
+
+
+
+X1 PD PDINV VCC VEE LOGIC1 0 DLSINV
+VLOGIC1 LOGIC1 0 1
+
+
+
+
+.PARAM ITAILMAX_SLOPE = 
++ { ( ITAILMAX_Y2 - ITAILMAX_Y1 ) / ( ITAILMAX_X2 - ITAILMAX_X1 ) }
+.PARAM ITAILMAX_INTCP = 
++ { ITAILMAX_Y1 - ITAILMAX_SLOPE * ITAILMAX_X1 }
+
+EITAILMAX ITAILMAX 0 VALUE = 
++ { ITAILMAX_SLOPE * V(VCC,VEE) + ITAILMAX_INTCP  }
+
+
+.PARAM ITAILMIN_SLOPE = 
++ { ( ITAILMIN_Y2 - ITAILMIN_Y1 ) / ( ITAILMIN_X2 - ITAILMIN_X1 ) }
+.PARAM ITAILMIN_INTCP = 
++ { ITAILMIN_Y1 - ITAILMIN_SLOPE * ITAILMIN_X1 }
+
+EITAILMIN ITAILMIN 0 VALUE = 
++ { ITAILMIN_SLOPE * V(VCC,VEE) + ITAILMIN_INTCP  }
+
+
+G1 IOUTP IOUTM VALUE = { ( 1-V(PDINV) ) * (
++ CHOICE1  * ( LIMIT ( GM * V(VINP,VINM) , -V(ITAILMIN), V(ITAILMAX) ) ) +
++ CHOICE2  * ( GM * (V(ITAILMAX)/GM) * TANH( V(VINP,VINM) / (V(ITAILMAX)/GM) )   ) + 
++ CHOICE3  * ( GM * V(VINP,VINM) / ( 1 + GM/V(ITAILMAX) * ABS( V(VINP,VINM) ) ) ) +                
++ CHOICE11 * ( LIMIT ( ( GM * EXP ( LIMIT ( SBF * ABS(V(VINP,VINM)) , -LOG(1E100), LOG(1E100) ) ) ) 
++                     * V(VINP,VINM) , -V(ITAILMIN), V(ITAILMAX) ) ) +
+
++ 0        ) }
+
+.ENDS
+
+
+
+
+.SUBCKT IBIAS_0  VINP VINM PARAMS:
++ CHOICE       = 1
+
++ IBIAS        = -10U
++ IOFFSET      = 150N
+
++ TA           = 25
++ IBIASDRIFT   = 0
++ IOFFSETDRIFT = 0
+
++ IBIASP       =  -9.925U
++ IBIASM       = -10.075U
+
+.PARAM CHOICE1 = { IF ( CHOICE == 1, 1, 0 ) }
+.PARAM CHOICE2 = { IF ( CHOICE == 2, 1, 0 ) }
+
+.PARAM IB = { CHOICE1 * IBIAS   + CHOICE2 * (IBIASP + IBIASM)/2  }
+.PARAM IO = { CHOICE1 * IOFFSET + CHOICE2 * ABS(IBIASP - IBIASM) } 
+
+EIB IB 0 VALUE = { IBIASDRIFT   * TEMP + ( IB - IBIASDRIFT   * TA ) }
+EIO IO 0 VALUE = { IOFFSETDRIFT * TEMP + ( IO - IOFFSETDRIFT * TA ) }
+
+GIBP VINP 0 VALUE = { V(IB) + V(IO)/2 }
+GIBM VINM 0 VALUE = { V(IB) - V(IO)/2 }
+
+.ENDS
+
+
+.SUBCKT CMRR_0  A B C PARAMS:
+
++ CMRR_DC          = -100
++ CMRR_F3DB             = 50E3
++ CMRR_F3DB_FUDGEFACTOR = 3.4
+
+.PARAM CMRR       = {0-CMRR_DC}
+.PARAM FCMRR   = {CMRR_F3DB * CMRR_F3DB_FUDGEFACTOR}
+
+X1 A B C 0 CMRR_NEW PARAMS: CMRR = {CMRR} FCMRR = {FCMRR}
+.ENDS
+
+
+.SUBCKT CMRR_NEW   VI  VO VX GNDF PARAMS: CMRR = 130 FCMRR = 1.6K
+.PARAM PI = 3.141592
+.PARAM RCMRR = 1
+.PARAM GCMRR = {PWR(10,-CMRR/20)/RCMRR}
+.PARAM LCMRR = {RCMRR/(2*PI*FCMRR)}
+G1  GNDF 1 VX GNDF {GCMRR}
+R1  1 2 {RCMRR}
+L1  2 GNDF {LCMRR}
+
+EA  101 GNDF 1 GNDF 1
+GRA  101 102 VALUE = {V(101,102)/1E6}
+CA  102 GNDF 1E3
+EB  1 1A VALUE = {V(102,GNDF)}
+
+E1  VI VO 1A GNDF 1
+.ENDS
+
+
+.SUBCKT PSRR_0  VDD VSS A B PARAMS:
+
++ PSRRP_DC    = -100
++ PSRRP_F3DB  = 100K
+
++ PSRRN_DC    = -90
++ PSRRN_F3DB  = 90K
+
+.PARAM PSRRP       = {0-PSRRP_DC}
+.PARAM PSRRN       = {0-PSRRN_DC}
+.PARAM FPSRRP      = {PSRRP_F3DB}
+.PARAM FPSRRN      = {PSRRN_F3DB}
+
+
+X1 VDD VSS A B 0 PSRR_DUAL_NEW PARAMS:
++ PSRRP = {PSRRP} FPSRRP = {FPSRRP}
++ PSRRN = {PSRRN} FPSRRN = {FPSRRN}
+.ENDS
+
+
+.SUBCKT PSRR_DUAL_NEW   VDD  VSS  VI  VO  GNDF 
++ PARAMS: PSRRP = 130 FPSRRP = 1.6
++ PSRRN = 130 FPSRRN = 1.6
+.PARAM PI = 3.141592
+.PARAM RPSRRP = 1
+.PARAM GPSRRP = {PWR(10,-PSRRP/20)/RPSRRP}
+.PARAM LPSRRP = {RPSRRP/(2*PI*FPSRRP)}
+.PARAM RPSRRN = 1
+.PARAM GPSRRN = {PWR(10,-PSRRN/20)/RPSRRN}
+.PARAM LPSRRN = {RPSRRN/(2*PI*FPSRRN)}
+
+G1  GNDF 1 VDD GNDF {GPSRRP}
+R1  1 2 {RPSRRP}
+L1  2 GNDF {LPSRRP}
+
+EA  101 GNDF 1 GNDF 1
+GRA  101 102 VALUE = { V(101,102)/1E6 }
+CA  102 GNDF 1E3
+EB  1 1A VALUE = {V(102,GNDF)}
+
+
+G2  GNDF 3 VSS GNDF {GPSRRN}
+R2  3 4 {RPSRRN}
+L2  4 GNDF {LPSRRN}
+
+EC  301 GNDF 3 GNDF 1
+GRC  301 302 VALUE = { V(301,302)/1E6 }
+CC  302 GNDF 1E3
+ED  3 3A VALUE = {V(302,GNDF)}
+
+
+E1  VO VI VALUE = {V(1A,GNDF) + V(3A,GNDF)}
+C3  VDD VSS 10P
+.ENDS
+
+
+.SUBCKT VINOFFSET_0  POS NEG PARAMS: 
++ TA     = 25
++ VOS    = 500U
++ DRIFT  = 10U 
+
+* Y = M*X + C
+* Y = DRIFT * TEMP + C
+
+* Y(25) = DRIFT * 25 + C
+* C = Y(25) - DRIFT * 25
+
+* Y = DRIFT * TEMP + ( Y(25) - DRIFT * 25 ) 
+
+E1 POS NEG VALUE = { DRIFT * TEMP + ( VOS - DRIFT * TA     ) }
+
+
+
+.ENDS
+
+
+.SUBCKT INOISE_0  A B PARAMS:
+*THE FOLLOWING UNITS HAVE BEEN NORMALIZED TO "AMPS" AND "HZ"
+*THE FEMT BLOCK UNITS ARE "FEMTO-AMPS" AND "HZ".  
++ X = { 1M  }
++ Y = { 100F }
++ Z = { 1F }
+X1 A B FEMT PARAMS: NLFF = { Y/1F }  FLWF = { X } NVRF = { Z/1F }
+.ENDS
+
+
+
+.SUBCKT FEMT  1 2 PARAMS: NLFF = 0.1 FLWF = 0.001 NVRF = 0.1
+.PARAM GLFF={PWR(FLWF,0.25)*NLFF/1164}
+.PARAM RNVF={1.184*PWR(NVRF,2)}
+.MODEL DVNF D KF={PWR(FLWF,0.5)/1E11} IS=1.0E-16
+I1 0 7 10E-3
+I2 0 8 10E-3
+D1 7 0 DVNF
+D2 8 0 DVNF
+E1 3 6 7 8 {GLFF}
+R1 3 0 1E9
+R2 3 0 1E9
+R3 3 6 1E9
+E2 6 4 5 0 10
+R4 5 0 {RNVF}
+R5 5 0 {RNVF}
+R6 3 4 1E9
+R7 4 0 1E9
+G1 1 2 3 4 1E-6
+C1 1 0 1E-15
+C2 2 0 1E-15
+C3 1 2 1E-15
+.ENDS
+
+
+
+.SUBCKT VNOISE_0  A B PARAMS:
+*THE FOLLOWING UNITS HAVE BEEN NORMALIZED TO "VOLTS" AND "HZ"
+*THE VNSE BLOCK UNITS ARE "NANO-VOLTS" AND "HZ".  
++ X = { 1M  }
++ Y = { 100N }
++ Z = { 5N  }
+X1 A B VNSE PARAMS: NLF = { Y/1N } FLW = { X }  NVR = { Z/1N }
+.ENDS
+
+
+* BEGIN PROG NSE NANO VOLT/RT-HZ
+.SUBCKT VNSE  1 2 PARAMS: NLF = 10 FLW = 4  NVR = 4.6
+* BEGIN SETUP OF NOISE GEN - NANOVOLT/RT-HZ
+* INPUT THREE VARIABLES
+* SET UP VNSE 1/F
+********************
+* NV/RHZ AT 1/F FREQ
+* NLF
+********************
+* FREQ FOR 1/F VAL
+* FLW
+********************
+* SET UP VNSE FB
+* NV/RHZ FLATBAND
+* NVR
+********************
+* END USER INPUT
+* START CALC VALS
+.PARAM GLF={PWR(FLW,0.25)*NLF/1164}
+.PARAM RNV={1.184*PWR(NVR,2)}
+.MODEL DVN D KF={PWR(FLW,0.5)/1E11} IS=1.0E-16
+* END CALC VALS
+I1 0 7 10E-3
+I2 0 8 10E-3
+D1 7 0 DVN
+D2 8 0 DVN
+E1 3 6 7 8 {GLF}
+R1 3 0 1E9
+R2 3 0 1E9
+R3 3 6 1E9
+E2 6 4 5 0 10
+R4 5 0 {RNV}
+R5 5 0 {RNV}
+R6 3 4 1E9
+R7 4 0 1E9
+E3 1 2 3 4 1
+C1 1 0 1E-15
+C2 2 0 1E-15
+C3 1 2 1E-15
+.ENDS
+* END PROG NSE NANOV/RT-HZ
+
+
+
+.SUBCKT HPA_INV_IDEAL_0  1 2 VDD VSS
+E1 2 0 VALUE = { IF( V(1)> (V(VDD)+V(VSS))/2, V(VSS), V(VDD) ) }
+.ENDS
+
+
+.SUBCKT IQ_0  VCCMAIN VEEMAIN PD VEE VCC PARAMS:
++ IOFF = { 1N }
+
++ ION_X1 = { 0.0 }
++ ION_Y1 = { 1M }
+
++ ION_X2 = { 1.6 }
++ ION_Y2 = { 1M }
+
++ ION_X3 = { 1.9 }
++ ION_Y3 = { 1M }
+
++ ION_X4 = { 12.0 }
++ ION_Y4 = { 1M }
+
+*PD = 1 => DEVICE ON
+*PD = 0 => DEVICE OFF
+
+EION_SEG1 ION_SEG1 0 VALUE = { IF (             V(VCC,VEE) <= ION_X2, 1, 0 ) }
+EION_SEG2 ION_SEG2 0 VALUE = { IF ( V(VCC,VEE) > ION_X2 & V(VCC,VEE) <= ION_X3, 1, 0 ) }
+EION_SEG3 ION_SEG3 0 VALUE = { IF ( V(VCC,VEE) > ION_X3                , 1, 0 ) }
+
+
+
+.PARAM ION_SEG1_SLOPE = { ( ION_Y2 - ION_Y1 ) / ( ION_X2 - ION_X1 ) }
+.PARAM ION_SEG1_INTCP = { ION_Y1 - ION_SEG1_SLOPE * ION_X1 }
+
+.PARAM ION_SEG2_SLOPE = { ( ION_Y3 - ION_Y2 ) / ( ION_X3 - ION_X2 ) }
+.PARAM ION_SEG2_INTCP = { ION_Y2 - ION_SEG2_SLOPE * ION_X2 }
+
+.PARAM ION_SEG3_SLOPE = { ( ION_Y4 - ION_Y3 ) / ( ION_X4 - ION_X3 ) }
+.PARAM ION_SEG3_INTCP = { ION_Y3 - ION_SEG3_SLOPE * ION_X3 }
+
+
+
+EION ION 0 VALUE = {  V(ION_SEG1) * ( ION_SEG1_SLOPE * V(VCC,VEE) + ION_SEG1_INTCP ) +
++   V(ION_SEG2) * ( ION_SEG2_SLOPE * V(VCC,VEE) + ION_SEG2_INTCP ) +
++    V(ION_SEG3) * ( ION_SEG3_SLOPE * V(VCC,VEE) + ION_SEG3_INTCP )  }
+
+*EION ION 0 VALUE = { ION_SEG3_SLOPE  }
+
+
+X1 PD PDINV VCC VEE LOGIC1 0 DLSINV
+VLOGIC1 LOGIC1 0 1
+
+G1 VCCMAIN VEEMAIN VALUE = { V(ION) * ( 1-V(PDINV) ) + IOFF * V(PDINV) }  
+
+.ENDS
+
+
+
+
+
+.SUBCKT OUTPUTCIR_VOHVOL_0  A B C
+
+E1 A B TABLE { V(C) } =  
++ (0,1.05) 
++ (115M,1.05)
++ (116M,1.5)
++ (117M,2.0)
++ (118M,3.0)
++ (119M,4.0)
++ (120M,5.0) 
+
+.ENDS
+
+
+.SUBCKT OUTPUTCIR_VOHVOL_1  A B C
+
+E1 A B TABLE { V(C) } =  
++ (0,0.9) 
++ (115M,0.9)
++ (116M,1.0)
++ (117M,2.0)
++ (118M,3.0)
++ (119M,4.0)
++ (120M,5.0) 
+
+
+.ENDS
+
+
+.SUBCKT DIODEIDEAL_0  NEG POS
+
+G1 POS NEG VALUE = { IF ( V(POS,NEG) <= 0 , 0, V(POS,NEG)*0.01G ) }
+R0 POS NEG 1000G
+
+.ENDS
+
+
+.SUBCKT OUTPUTCIR_ILOAD_0   VDD VSS VIMON PD
+X1 PD PDINV VDD VSS LOGIC1 0 DLSINV
+VLOGIC1 LOGIC1 0 1
+
+G1 VDD 0 VALUE = {IF(V(VIMON) >= 0, V(VIMON)*( 1-V(PDINV) ), 0)}
+G2 VSS 0 VALUE = {IF(V(VIMON)  < 0, V(VIMON)*( 1-V(PDINV) ), 0)}
+
+.ENDS
+
+
+.SUBCKT DLSINV 1 2 VDD_OLD VSS_OLD VDD_NEW VSS_NEW
+E1 3 0 VALUE = { IF( V(1) > (V(VDD_OLD)+V(VSS_OLD))/2, V(VSS_NEW), V(VDD_NEW) ) }
+R1 3 2 1
+C1 2 0 1P
+.ENDS
+
+
+.END

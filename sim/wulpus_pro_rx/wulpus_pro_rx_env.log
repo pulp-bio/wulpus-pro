@@ -1,0 +1,56 @@
+LTspice 24.0.12 for Windows
+Circuit: * C:\Users\serge\Documents\repos\wulpus_pro\ltspice_sim\wulpus_pro_rx\wulpus_pro_rx_env.asc
+Start Time: Tue Nov 26 10:41:24 2024
+solver = Normal
+Maximum thread count: 14
+tnom = 27
+temp = 27
+method = modified trap
+ERROR: Node U1:VSLEW is floating and connected to current source B:U1:SLEW
+
+WARNING: Less than two connections to node n001.  This node is used by b1.
+WARNING: Less than two connections to node nc_07.  This node is used by r:u5:_r1.
+Direct Newton iteration failed to find .op point.  (Use ".option noopiter" to skip.)
+Starting Gmin stepping
+Gmin = 10
+Gmin = 1.07374
+Gmin = 0.115292
+Gmin = 0.0123794
+Gmin = 0.00132923
+vernier = 0.5
+vernier = 0.25
+vernier = 0.125
+vernier = 0.0625
+Gmin = 0.00100083
+vernier = 0.03125
+vernier = 0.015625
+vernier = 0.0078125
+vernier = 0.00390625
+vernier = 0.00195312
+Gmin = 0.00100083
+vernier = 0.000976562
+vernier = 0.000488281
+Gmin = 0
+Gmin stepping failed
+
+Starting source stepping with srcstepmethod=0
+Source Step = 3.0303%
+Source Step = 33.3333%
+Source Step = 63.6364%
+Source Step = 78.7997%
+vernier = 0.000976562
+Starting source stepping with srcstepmethod=1
+Source Step = 3.0303%
+Source Step = 33.3333%
+Source Step = 63.6364%
+Source Step = 78.7997%
+vernier = 0.000976562
+Source stepping failed
+
+Pseudo transient terminated at 102.474 s, solution accepted ready or not!
+Ignoring empty pin current: Ix(u1:comm)
+Ignoring empty pin current: Ix(u1:gain)
+Ignoring empty pin current: Ix(u1:comm)
+Ignoring empty pin current: Ix(u1:gain)
+Total elapsed time: 5.494 seconds.
+

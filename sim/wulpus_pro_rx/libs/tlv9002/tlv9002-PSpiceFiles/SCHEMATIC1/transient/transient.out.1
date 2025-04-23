@@ -1,0 +1,48 @@
+
+**** 08/01/22 00:11:32 ******* PSpice 17.4.0 (Nov 2018) ******* ID# 0 ********
+
+ ** Profile: "SCHEMATIC1-transient"  [ C:\Users\a0500607\Desktop\TLV9002_PSpice\tlv9002-pspicefiles\schematic1\transient.sim ] 
+
+
+ ****     CIRCUIT DESCRIPTION
+
+
+******************************************************************************
+
+
+
+
+** Creating circuit file "transient.cir" 
+** WARNING: THIS AUTOMATICALLY GENERATED FILE MAY BE OVERWRITTEN BY SUBSEQUENT SIMULATIONS
+
+*Libraries: 
+* Profile Libraries :
+* Local Libraries :
+.LIB "C:/Users/a0500607/Desktop/nanocap_netlist_fixer/name_reverted/tlv9002.lib" 
+* From [PSPICE NETLIST] section of C:\cds_spb_home\cdssetup\OrCAD_PSpiceTIPSpice_Install\17.4.0\PSpice.ini file:
+
+ERROR(ORPSIM-16276): Simulation cannot be completed because library C:/Users/a0500607/Desktop/nanocap_netlist_fixer/name_reverted/tlv9002.lib 
+is not available.
+.lib "nom_pspti.lib" 
+.lib "nom.lib" 
+
+*Analysis directives: 
+.TRAN  0 1m 0 
+.OPTIONS ADVCONV
+.OPTIONS FILEMODELSEARCH
+.PROBE64 N([VO])
+.INC "..\SCHEMATIC1.net" 
+
+
+
+**** INCLUDING SCHEMATIC1.net ****
+* source TLV9002
+X_U1         N00349 VO VCC VEE VO TLV9002
+V_V1         VCC 0 2.75
+V_V2         0 VEE 2.75
+V_Vin         N00349 0  
++SIN 0 1 1k 0 0 0
+
+**** RESUMING transient.cir ****
+.END
+

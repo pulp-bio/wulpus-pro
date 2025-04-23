@@ -1,0 +1,444 @@
+* OPA891 - Rev. 1.1
+* Created by Jacob Freet; 2023-04-29
+* Created with Green-Williams-Lis Current Sense Amp Macro-model Architecture
+* Copyright 2023 by Texas Instruments Corporation
+******************************************************
+* MACRO-MODEL SIMULATED PARAMETERS:
+******************************************************
+* AC PARAMETERS
+**********************
+* CLOSED-LOOP OUTPUT IMPEDANCE VS. FREQUENCY (Zout vs. Freq.)
+* CLOSED-LOOP GAIN AND PHASE VS. FREQUENCY  WITH RL, CL EFFECTS (Acl vs. Freq.)
+* COMMON-MODE REJECTION RATIO VS. FREQUENCY (CMRR vs. Freq.)
+* POWER SUPPLY REJECTION RATIO VS. FREQUENCY (PSRR vs. Freq.)
+* INPUT VOLTAGE NOISE DENSITY VS. FREQUENCY (en vs. Freq.)
+**********************
+* DC PARAMETERS
+**********************
+* INPUT COMMON-MODE VOLTAGE RANGE (Vcm)
+* OUTPUT VOLTAGE SWING vs. OUTPUT CURRENT (Vout vs. Iout)
+* SHORT-CIRCUIT OUTPUT CURRENT (Isc)
+* QUIESCENT CURRENT (Iq)
+* INPUT CURRENT NOISE (in)
+**********************
+* TRANSIENT PARAMETERS
+**********************
+* SLEW RATE (SR)
+* SETTLING TIME VS. CAPACITIVE LOAD (ts)
+* OVERLOAD RECOVERY TIME (tor)
+**********************
+* Change log
+**********************
+* V1.0 -> V1.1: Fixed issue with output clamping
+******************************************************
+.subckt OPA891 IN+ IN- OUT V+ V-
+******************************************************
+
+.MODEL R_RES_1 RES ( TCE=0 T_ABS=-273.15)
+.MODEL S_VSWITCH_1 VSWITCH (RON=50 ROFF=1T VON=700M VOFF=0)
+.MODEL S_VSWITCH_2 VSWITCH (RON=50 ROFF=1T VON=500M VOFF=100M)
+.MODEL S_VSWITCH_3 VSWITCH (RON=10M ROFF=1T VON=10M VOFF=0)
+.MODEL S_VSWITCH_4 VSWITCH (RON=1M ROFF=1T VON=500M VOFF=100M)
+
+I_OS        ESDn MID 8.97U
+I_B         21 MID 9U
+V_GRp       70 MID 100
+V_GRn       71 MID -100
+V_ISCp      64 MID 200
+V_ISCn      65 MID -200
+V_ORn       63 VCLP -105M
+V11         69 62 0
+V_ORp       61 VCLP 105M
+V12         68 60 0
+V4          49 OUT 0
+VCM_MIN     92 VEE_B 700M
+VCM_MAX     93 VCC_B 700M
+I_Q         V+ V- 7.5M
+V_OS        99 21 159.67U
+R52         MID ESDp R_RES_1 1T 
+R53         ESDn MID R_RES_1 1T 
+XIn11       ESDn MID FEMT_0
+Xi_n        MID 21 FEMT_0
+Xe_n        ESDp 21 VNSE_0
+C31         MID 22  54.88P IC=0
+R93         23 24 R_RES_1 100 
+L3          25 23  491.21P IC=0
+R73         MID 24 R_RES_1 1 
+GVCCS17     24 MID 26 25  -1MEG
+C26         MID 25  282.9F IC=0
+R72         27 26 R_RES_1 100 
+L2          28 27  4.112N IC=0
+R71         MID 26 R_RES_1 1 
+GVCCS16     26 MID 29 28  -1MEG
+C25         MID 28  304.2F IC=0
+R70         MID 29 R_RES_1 1 
+GVCCS15     29 MID 22 MID  -1
+R69         MID 22 R_RES_1 1 
+GVCCS6      22 MID 30 MID  -1
+C23         MID 30  1.06P IC=0
+L1          31 30  16.58N IC=0
+R68         32 31 R_RES_1 100 
+R67         MID 32 R_RES_1 1 
+GVCCS5      32 MID 33 MID  -5.263
+R66         MID 33 R_RES_1 23.46 
+C22         34 33  4.188P IC=0
+R65         34 33 R_RES_1 100 
+R64         MID 34 R_RES_1 1 
+GVCCS4      34 MID 35 MID  -1
+C21         36 MID  49.74P IC=0
+R63         35 36 R_RES_1 100 
+R62         37 35 R_RES_1 60 
+R51         MID 37 R_RES_1 1 
+GVCCS3      37 MID VSENSE MID  -1
+C20         CLAMP MID  215P IC=0
+R50         MID CLAMP R_RES_1 1MEG 
+XVCCS_LIM_2 38 MID MID CLAMP VCCS_LIM_2_0
+R44         MID 38 R_RES_1 1MEG 
+XVCCS_LIM_1 39 40 MID 38 VCCS_LIM_1_0
+R92         41 42 R_RES_1 10K 
+C30         41 42  18.95N
+R91         MID 42 R_RES_1 66.14K 
+GVCCS14     43 MID 42 MID  -1.151
+R90         43 MID R_RES_1 1 
+XU1         44 MID MID 45 VCCS_LIM_ZO_0
+R87         46 44 R_RES_1 10K 
+C29         46 44  11.37F
+R86         MID 44 R_RES_1 7.784 
+R85         45 MID R_RES_1 1 
+R84         46 MID R_RES_1 1 
+GVCCS13     46 MID 47 MID  -1
+C15         MID 48  1.317P
+R83         48 47 R_RES_1 100 
+R82         43 47 R_RES_1 1.173K 
+R56         MID 49 R_RES_1 41.15 
+R55         49 45 R_RES_1 411.55 
+R54         41 MID R_RES_1 1 
+GVCCS1      41 MID CL_CLAMP 49  -89.31
+R81         MID 50 R_RES_1 1 
+GVCCS12     50 MID 51 MID  -1
+R61         MID 51 R_RES_1 850M 
+C16         51 52  187.2P
+R58         52 51 R_RES_1 1MEG 
+GVCCS2      52 MID VCC_B MID  -2.7579
+R57         MID 52 R_RES_1 1 
+R80         MID 53 R_RES_1 1 
+GVCCS11     53 MID 54 MID  -1
+R79         MID 54 R_RES_1 19M 
+C14         54 55  8.337N
+R78         55 54 R_RES_1 10K 
+GVCCS10     55 MID VEE_B MID  -427.79M
+R49         MID 55 R_RES_1 1 
+SW11        ESDp ESDn ESDp ESDn S_VSWITCH_1
+SW10        ESDn ESDp ESDn ESDp S_VSWITCH_1
+S5          V- ESDp V- ESDp S_VSWITCH_2
+S4          V- ESDn V- ESDn S_VSWITCH_2
+S2          ESDn V+ ESDn V+ S_VSWITCH_2
+S3          ESDp V+ ESDp V+ S_VSWITCH_2
+C28         56 MID  1P
+R77         57 56 R_RES_1 100 
+C27         58 MID  1P
+R76         59 58 R_RES_1 100 
+R75         MID 60 R_RES_1 1 
+GVCCS8      60 MID 61 MID  -1
+R74         62 MID R_RES_1 1 
+GVCCS7      62 MID 63 MID  -1
+XIQPos      VIMON MID MID V+ VCCS_LIMIT_IQ_0
+XIQNeg      MID VIMON V- MID VCCS_LIMIT_IQ_0
+C_DIFF      ESDp ESDn  1.8P
+XCL_AMP     64 65 VIMON MID 66 67 CLAMP_AMP_LO_0
+SOR_SWp     CLAMP 68 CLAMP 68 S_VSWITCH_3
+SOR_SWn     69 CLAMP 69 CLAMP S_VSWITCH_3
+XGR_AMP     70 71 72 MID 73 74 CLAMP_AMP_HI_0
+R39         70 MID R_RES_1 1T 
+R37         71 MID R_RES_1 1T 
+R42         VSENSE 72 R_RES_1 1M 
+C19         72 MID  1F
+R38         73 MID R_RES_1 1 
+R36         MID 74 R_RES_1 1 
+R40         73 75 R_RES_1 1M 
+R41         74 76 R_RES_1 1M 
+C17         75 MID  1F
+C18         MID 76  1F
+XGR_SRC     75 76 CLAMP MID VCCS_LIM_GR_0
+R21         66 MID R_RES_1 1 
+R20         MID 67 R_RES_1 1 
+R29         66 77 R_RES_1 1M 
+R30         67 78 R_RES_1 1M 
+C9          77 MID  1F
+C8          MID 78  1F
+XCL_SRC     77 78 CL_CLAMP MID VCCS_LIM_4_0
+R22         64 MID R_RES_1 1T 
+R19         MID 65 R_RES_1 1T 
+XCLAWp      VIMON MID 79 VCC_B VCCS_LIM_CLAWP_0
+XCLAWn      MID VIMON VEE_B 80 VCCS_LIM_CLAWN_0
+R12         79 VCC_B R_RES_1 1K 
+R16         79 81 R_RES_1 1M 
+R13         VEE_B 80 R_RES_1 1K 
+R17         82 80 R_RES_1 1M 
+C6          82 MID  1F
+C5          MID 81  1F
+G2          VCC_CLP MID 81 MID  -1M
+R15         VCC_CLP MID R_RES_1 1K 
+G3          VEE_CLP MID 82 MID  -1M
+R14         MID VEE_CLP R_RES_1 1K 
+XCLAW_AMP   VCC_CLP VEE_CLP VOUT_S MID 83 84 CLAMP_AMP_LO_0
+R26         VCC_CLP MID R_RES_1 1T 
+R23         VEE_CLP MID R_RES_1 1T 
+R25         83 MID R_RES_1 1 
+R24         MID 84 R_RES_1 1 
+R27         83 85 R_RES_1 1M 
+R28         84 86 R_RES_1 1M 
+C11         85 MID  1F
+C10         MID 86  1F
+XCLAW_SRC   85 86 CLAW_CLAMP MID VCCS_LIM_3_0
+H2          59 MID V11 -1
+H3          57 MID V12 1
+C12         SW_OL MID  100F
+R32         87 SW_OL R_RES_1 100 
+R31         87 MID R_RES_1 1 
+XOL_SENSE   MID 87 58 56 OL_SENSE_0
+S1          41 42 SW_OL MID S_VSWITCH_4
+H1          88 MID V4 1K
+S7          V- OUT V- OUT S_VSWITCH_2
+S6          OUT V+ OUT V+ S_VSWITCH_2
+R11         MID 89 R_RES_1 1T 
+R18         89 VOUT_S R_RES_1 100 
+C7          VOUT_S MID  1P
+E5          89 MID OUT MID  1
+C13         VIMON MID  1P
+R33         88 VIMON R_RES_1 100 
+R10         MID 88 R_RES_1 1T 
+R47         90 VCLP R_RES_1 100 
+C24         VCLP MID  100F
+E4          90 MID CL_CLAMP MID  1
+R46         MID CL_CLAMP R_RES_1 1K 
+G9          CL_CLAMP MID CLAW_CLAMP MID  -1M
+R45         MID CLAW_CLAMP R_RES_1 1K 
+G8          CLAW_CLAMP MID 24 MID  -1M
+R43         MID VSENSE R_RES_1 1K 
+G15         VSENSE MID CLAMP MID  -1M
+C4          39 MID  1F
+R9          39 91 R_RES_1 1M 
+R7          MID 92 R_RES_1 1T 
+R6          93 MID R_RES_1 1T 
+R8          MID 91 R_RES_1 1 
+XVCM_CLAMP  94 MID 91 MID 93 92 VCCS_EXT_LIM_0
+E1          MID 0 95 0  1
+R89         VEE_B 0 R_RES_1 1 
+R5          96 VEE_B R_RES_1 1M 
+C3          96 0  1F
+R60         95 96 R_RES_1 1MEG 
+C1          95 0  1
+R3          95 0 R_RES_1 1T 
+R59         97 95 R_RES_1 1MEG 
+C2          97 0  1F
+R4          VCC_B 97 R_RES_1 1M 
+R88         VCC_B 0 R_RES_1 1 
+G17         VEE_B 0 V- 0  -1
+G16         VCC_B 0 V+ 0  -1
+R_PSR       98 94 R_RES_1 1K 
+G_PSR       94 98 50 53  -1M
+R2          40 ESDn R_RES_1 1M 
+R1          98 99 R_RES_1 1M 
+C_CMn       ESDn MID  1.2P
+C_CMp       MID ESDp  1.2P
+R35         IN- ESDn R_RES_1 10M 
+R34         IN+ ESDp R_RES_1 10M 
+
+.ENDS OPA891
+
+
+* FEMT - input current noise in fA/rt-Hz
+.SUBCKT FEMT_0 1 2
+* Input variables
+* Set up 1/f noise
+* FLWF = 1/f frequency in Hz
+.param FLWF=10
+* NLFF = current noise density at 1/f frequency in fA/rt(Hz)
+.param NLFF=17e3
+* Set up broadband noise
+* NVRF = broadband current noise density in fA/rt(Hz)
+.param NVRF=1.74e3
+* Calculated values
+.param GLFF={PWR(FLWF,0.25)*NLFF/1164}
+.param RNVF={1.184*PWR(NVRF,2)}
+.model DVNF D KF={PWR(FLWF,0.5)/1e11} IS=1.0e-16
+* Circuit connections
+I1 0 7 10e-3
+I2 0 8 10e-3
+D1 7 0 DVNF
+D2 8 0 DVNF
+E1 3 6 7 8 {GLFF}
+R1 3 0 1e9
+R2 3 0 1e9
+R3 3 6 1e9
+E2 6 4 5 0 10
+R4 5 0 {RNVF}
+R5 5 0 {RNVF}
+R6 3 4 1e9
+R7 4 0 1e9
+G1 1 2 3 4 1e-6
+.ends
+
+
+
+* VNSE - input voltage noise in nV/rt-Hz
+.SUBCKT VNSE_0 1 2
+* Input variables
+* Set up 1/f noise
+* FLW = 1/f frequency in Hz
+.param FLW=10
+* NLF = voltage noise density at 1/f frequency in nV/rt(Hz)
+.param NLF=3.5
+* Set up broadband noise
+* NVR = broadband voltage noise density in nV/rt(Hz)
+.param NVR=0.97
+* Calculated values
+.param GLF={PWR(FLW,0.25)*NLF/1164}
+.param RNV={1.184*PWR(NVR,2)}
+.model DVN D KF={PWR(FLW,0.5)/1E11} IS=1.0E-16
+* Circuit connections
+I1 0 7 10E-3
+I2 0 8 10E-3
+D1 7 0 DVN
+D2 8 0 DVN
+E1 3 6 7 8 {GLF}
+R1 3 0 1E9
+R2 3 0 1E9
+R3 3 6 1E9
+E2 6 4 5 0 10
+R4 5 0 {RNV}
+R5 5 0 {RNV}
+R6 3 4 1E9
+R7 4 0 1E9
+E3 1 2 3 4 1
+.ends
+
+
+
+* Voltage-controlled current source with limits - Aol second stage
+.SUBCKT VCCS_LIM_2_0 VC+ VC- IOUT+ IOUT-
+.param Gain = 4.168e-3
+.param Ipos = 0.25
+.param Ineg = -0.25
+G1 IOUT+ IOUT- VALUE={LIMIT(Gain*V(VC+,VC-),Ineg,Ipos)}
+.ends
+
+
+
+* Voltage-controlled current source with limits - Aol first stage
+.SUBCKT VCCS_LIM_1_0 VC+ VC- IOUT+ IOUT-
+.param Gain = 1e-4
+.param Ipos = .5
+.param Ineg = -.5
+G1 IOUT+ IOUT- VALUE={LIMIT(Gain*V(VC+,VC-),Ineg,Ipos)}
+.ends
+
+
+
+* Voltage-controlled current source with limits - Zo output
+.SUBCKT VCCS_LIM_ZO_0 VC+ VC- IOUT+ IOUT-
+.param Gain = 1.286e3
+.param Ipos = 200
+.param Ineg = -200
+G1 IOUT+ IOUT- VALUE={LIMIT(Gain*V(VC+,VC-),Ineg,Ipos)}
+.ends
+
+
+
+* Voltage-controlled source with limits - Iout draw
+.SUBCKT VCCS_LIMIT_IQ_0 VC+ VC- IOUT+ IOUT-
+.param Gain = 1e-3
+G1 IOUT- IOUT+ VALUE={IF( (V(VC+,VC-)<=0),0,Gain*V(VC+,VC-) )}
+.ends
+
+
+
+* Clamp amp - claw and current limit clamp
+.SUBCKT CLAMP_AMP_LO_0 VC+ VC- VIN COM VO+ VO-
+*  pins     Clamp V+  Clamp V-  Vin  COM   Vout+  Vout-
+.param G=1
+* Output G(COM,0) when condition not met
+GVo+ COM Vo+ Value = {IF(V(VIN,COM)>V(VC+,COM),((V(VIN,COM)-V(VC+,COM))*G),0)}
+GVo- COM Vo- Value = {IF(V(VIN,COM)<V(VC-,COM),((V(VC-,COM)-V(VIN,COM))*G),0)}
+.ends
+
+
+
+* Clamp amp - overload and gross clamp
+.SUBCKT CLAMP_AMP_HI_0 VC+ VC- VIN COM VO+ VO-
+*  pins     Clamp V+  Clamp V-  Vin  COM   Vout+  Vout-
+.param G=10
+* Output G(COM,0) when condition not met
+GVo+ COM Vo+ Value = {IF(V(VIN,COM)>V(VC+,COM),((V(VIN,COM)-V(VC+,COM))*G),0)}
+GVo- COM Vo- Value = {IF(V(VIN,COM)<V(VC-,COM),((V(VC-,COM)-V(VIN,COM))*G),0)}
+.ends
+
+
+
+* Voltage-controlled current source with limits - gross clamp
+.SUBCKT VCCS_LIM_GR_0 VC+ VC- IOUT+ IOUT-
+.param Gain = 1
+.param Ipos = 0.05
+.param Ineg = -0.05
+G1 IOUT+ IOUT- VALUE={LIMIT(Gain*V(VC+,VC-),Ineg,Ipos)}
+.ends
+
+
+
+* Voltage-controlled current source with limits - current limit clamp
+.SUBCKT VCCS_LIM_4_0 VC+ VC- IOUT+ IOUT-
+.param Gain = 1
+.param Ipos = 0.2e-3
+.param Ineg = -0.2e-3
+G1 IOUT+ IOUT- VALUE={LIMIT(Gain*V(VC+,VC-),Ineg,Ipos)}
+.ends
+
+
+
+* Voltage-controlled current source (table-defined) - claw+
+.subckt VCCS_LIM_CLAWP_0 VC+ VC- IOUT+ IOUT-
+G1 IOUT+ IOUT- TABLE {abs(V(VC+,VC-))} =
++(0, 1.3e-3)
++(150, 3.2e-3)
+
+.ends
+
+
+
+* Voltage-controlled current source (table-defined) - claw-
+.SUBCKT VCCS_LIM_CLAWN_0 VC+ VC- IOUT+ IOUT-
+G1 IOUT+ IOUT- TABLE {abs(V(VC+,VC-))} =
++(0, 1.3e-3)
++(150, 4.3e-3)
+.ends
+
+
+
+* Voltage-controlled current source with limits - claw clamp
+.SUBCKT VCCS_LIM_3_0 VC+ VC- IOUT+ IOUT-
+.param Gain = 1
+.param Ipos = 0.4e-3
+.param Ineg = -0.4e-3
+G1 IOUT+ IOUT- VALUE={LIMIT(Gain*V(VC+,VC-),Ineg,Ipos)}
+.ends
+
+
+
+* Overload sense for Zo switches
+.SUBCKT OL_SENSE_0 COM SW+ OLN  OLP
+* pins          COM SW+ OLN OLP
+GSW+ COM SW+ Value = {IF((V(OLN,COM)>10e-3 | V(OLP,COM)>10e-3),1,0)}
+.ends
+
+
+
+* Voltage-controlled current source with external limits - Vcm clamp
+.SUBCKT VCCS_EXT_LIM_0 VIN+ VIN- IOUT- IOUT+ VP+ VP-
+.param Gain = 1
+G1 IOUT+ IOUT- VALUE={LIMIT(Gain*V(VIN+,VIN-),V(VP-,VIN-), V(VP+,VIN-))}
+.ends
+
+
+
+.END
