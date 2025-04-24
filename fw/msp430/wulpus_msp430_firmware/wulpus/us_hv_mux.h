@@ -27,13 +27,19 @@
 #define DELAY_CYCLES    2
 
 
-#define LE_PIN_PORT     GPIO_PORT_P7
-#define LE_PIN          GPIO_PIN0
+#define HV_MUX_LE_PORT     GPIO_PORT_P7
+#define HV_MUX_LE_PIN      GPIO_PIN0
+
+#define HV_MUX_CLR_PORT    GPIO_PORT_P4
+#define HV_MUX_CLR_PIN     GPIO_PIN3
+
 
 
 void hvMuxInit(void);
 void hvMuxConfTx(uint16_t tx_config);
 void hvMuxConfRx(uint16_t rx_config);
+
+void rxSpiSend(uint8_t byte);
 
 // Latch outputs
 // Transition from High to Low  transfers the contents of the

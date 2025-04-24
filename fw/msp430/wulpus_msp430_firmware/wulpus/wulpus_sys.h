@@ -36,7 +36,7 @@
 #define GPIO_PIN_BLE_READY         GPIO_PIN7
 
 
-// Novel for WULPUS PRO
+// New for WULPUS PRO (Apr-May 2025)
 
 // Preamp control
 #define GPIO_PORT_PREAMP_PWR_EN    GPIO_PORT_P1
@@ -77,8 +77,11 @@
 #define GPIO_PORT_HV_MUX_PWR_EN    GPIO_PORT_P6
 #define GPIO_PIN_HV_MUX_PWR_EN     GPIO_PIN5
 
-#define GPIO_PORT_PULSER_HIZ_EN    GPIO_PORT_P6
-#define GPIO_PIN_PULSER_HIZ_EN     GPIO_PIN2
+#define GPIO_PORT_PULSER_HIZ_EN_N  GPIO_PORT_P6
+#define GPIO_PIN_PULSER_HIZ_EN_N   GPIO_PIN2
+
+
+
 
 
 
@@ -169,6 +172,11 @@ void disableHvNeg(void);
 void enableHvPos(void);
 void disableHvPos(void);
 
+void enableHvMuxPwr(void);
+void disableHvMuxPwr(void);
+
+void enableHvPulser(void);
+void disableHvPulser(void);
 
 // Used before acquisitions and after acquisitions are completed
 void enableAll(void);

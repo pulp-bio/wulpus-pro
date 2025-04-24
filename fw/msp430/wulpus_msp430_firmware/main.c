@@ -204,6 +204,8 @@ static void usAcquisitionLoop(void)
             // Latching will occur in the timer interrupt after completion
             // of pulse generation
             hvMuxConfRx(msp_config.rxConfigs[tx_rx_id]);
+            // Enable HV pulser (switch HiZ state off)
+            enableHvPulser();
 
             // Trigger ultrasound acquisition
             no_error = triggerUsAcq();
@@ -313,6 +315,10 @@ static void fastTimerCc0Callback(void)
 {
     // Switch HV Mux
     hvMuxLatchOutput();
+
+    // Disable Pulser (switch to HiZ state)
+    disableHvPulser();
+
     // Disable HV DC-DC (we don't need switching at this point)
 //    disableHvDcDc();
     // Disable Fast Timer

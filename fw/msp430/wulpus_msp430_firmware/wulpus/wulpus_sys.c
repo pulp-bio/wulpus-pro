@@ -163,13 +163,13 @@ void initAllPowerSwitches(void)
     GPIO_setAsOutputPin(GPIO_PORT_VGA_PWR_EN, GPIO_PIN_VGA_PWR_EN);
     GPIO_setOutputLowOnPin(GPIO_PORT_VGA_PWR_EN, GPIO_PIN_VGA_PWR_EN);
 
-    // Preamp power switch (Off by default)
+    // Preamp power switch (Off by default, but on dev board is always on in Hardware)
     GPIO_setAsOutputPin(GPIO_PORT_PREAMP_PWR_EN, GPIO_PIN_PREAMP_PWR_EN);
     GPIO_setOutputLowOnPin(GPIO_PORT_PREAMP_PWR_EN, GPIO_PIN_PREAMP_PWR_EN);
 
     // Preamp Shutdown (Enable shutdown by default)
     GPIO_setAsOutputPin(GPIO_PORT_PREAMP_EN, GPIO_PIN_PREAMP_EN);
-    GPIO_setOutputLowOnPin(GPIO_PORT_PREAMP_EN, GPIO_PIN_PREAMP_EN);
+    GPIO_setOutputHighOnPin(GPIO_PORT_PREAMP_EN, GPIO_PIN_PREAMP_EN);
 
     // Power switch for HV DC DC input
     GPIO_setAsOutputPin(GPIO_PORT_HV_DCDC_EN, GPIO_PIN_HV_DCDC_EN);
@@ -182,6 +182,14 @@ void initAllPowerSwitches(void)
     // Enable for - HV converter
     GPIO_setAsOutputPin(GPIO_PORT_HV_NEG_EN, GPIO_PIN_HV_NEG_EN);
     GPIO_setOutputHighOnPin(GPIO_PORT_HV_NEG_EN, GPIO_PIN_HV_NEG_EN);
+
+    // Enable for +5V HV MUX supply
+    GPIO_setAsOutputPin(GPIO_PORT_HV_MUX_PWR_EN, GPIO_PIN_HV_MUX_PWR_EN);
+    GPIO_setOutputHighOnPin(GPIO_PORT_HV_MUX_PWR_EN, GPIO_PIN_HV_MUX_PWR_EN);
+
+    // HV pulser HiZ state enable
+    GPIO_setAsOutputPin(GPIO_PORT_PULSER_HIZ_EN_N, GPIO_PIN_PULSER_HIZ_EN_N);
+    GPIO_setOutputLowOnPin(GPIO_PORT_PULSER_HIZ_EN_N, GPIO_PIN_PULSER_HIZ_EN_N);
 
     return;
 }
@@ -328,7 +336,7 @@ void disableVgaPwr(void)
 
 void enablePreampPwr(void)
 {
-    GPIO_setOutputLowOnPin(GPIO_PORT_PREAMP_PWR_EN, GPIO_PIN_PREAMP_PWR_EN);
+    GPIO_setOutputHighOnPin(GPIO_PORT_PREAMP_PWR_EN, GPIO_PIN_PREAMP_PWR_EN);
     return;
 }
 
@@ -340,7 +348,7 @@ void disablePreampPwr(void)
 
 void enablePreamp(void)
 {
-    GPIO_setOutputLowOnPin(GPIO_PORT_PREAMP_EN, GPIO_PIN_PREAMP_EN);
+    GPIO_setOutputHighOnPin(GPIO_PORT_PREAMP_EN, GPIO_PIN_PREAMP_EN);
     return;
 }
 
@@ -383,6 +391,30 @@ void enableHvPos(void)
 void disableHvPos(void)
 {
     GPIO_setOutputLowOnPin(GPIO_PORT_HV_POS_EN, GPIO_PIN_HV_POS_EN);
+    return;
+}
+
+void enableHvMuxPwr(void)
+{
+    GPIO_setOutputHighOnPin(GPIO_PORT_HV_MUX_PWR_EN, GPIO_PIN_HV_MUX_PWR_EN);
+    return;
+}
+
+void disableHvMuxPwr(void)
+{
+    GPIO_setOutputLowOnPin(GPIO_PORT_HV_MUX_PWR_EN, GPIO_PIN_HV_MUX_PWR_EN);
+    return;
+}
+
+void enableHvPulser(void)
+{
+    GPIO_setOutputLowOnPin(GPIO_PORT_PULSER_HIZ_EN_N, GPIO_PIN_PULSER_HIZ_EN_N);
+    return;
+}
+
+void disableHvPulser(void)
+{
+    GPIO_setOutputHighOnPin(GPIO_PORT_PULSER_HIZ_EN_N, GPIO_PIN_PULSER_HIZ_EN_N);
     return;
 }
 

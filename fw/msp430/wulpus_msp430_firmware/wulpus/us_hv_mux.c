@@ -23,6 +23,18 @@
 
 void hvMuxInit(void)
 {
+    // HV MUX Initialization
+
+    // Latch enable (SW_LE) signal will be manually controlled
+    GPIO_setAsOutputPin(HV_MUX_LE_PORT, HV_MUX_LE_PIN);
+
+    // Clear (CLR) signal will be manually controlled
+    GPIO_setAsOutputPin(HV_MUX_CLR_PORT, HV_MUX_CLR_PIN);
+    // Pull CLR Low (no action)
+    GPIO_setOutputLowOnPin(HV_MUX_CLR_PORT, HV_MUX_CLR_PIN);
+
+
+
     // Configure SPI pins
     // Select Port 5
     // Set Pin 4 to output peripheral function, SPI CLK: SW_CLK
@@ -31,9 +43,6 @@ void hvMuxInit(void)
         GPIO_PORT_P5,
         GPIO_PIN4 + GPIO_PIN5,
         GPIO_SECONDARY_MODULE_FUNCTION);
-
-    // Latch enable (SW_LE) signal will be manually controlled
-    GPIO_setAsOutputPin(LE_PIN_PORT, LE_PIN);
 
 
     // Initialize SPI master: MSB first, inactive high clock polarity and 4 wire SPI
@@ -57,7 +66,7 @@ void hvMuxInit(void)
 void hvMuxConfTx(uint16_t tx_config)
 {
     // Pull ~LE High
-    GPIO_setOutputHighOnPin(LE_PIN_PORT, LE_PIN);
+    GPIO_setOutputHighOnPin(HV_MUX_LE_PORT, HV_MUX_LE_PIN);
 
     __delay_cycles(DELAY_CYCLES);
 
@@ -76,7 +85,7 @@ void hvMuxConfTx(uint16_t tx_config)
 void hvMuxConfRx(uint16_t rx_config)
 {
     // Pull ~LE High
-    GPIO_setOutputHighOnPin(LE_PIN_PORT, LE_PIN);
+    GPIO_setOutputHighOnPin(HV_MUX_LE_PORT, HV_MUX_LE_PIN);
 
     __delay_cycles(DELAY_CYCLES);
 
@@ -96,12 +105,20 @@ void hvMuxConfRx(uint16_t rx_config)
 void hvMuxLatchOutput(void)
 {
     // Pull ~LE Low to latch the signal
-    GPIO_setOutputLowOnPin(LE_PIN_PORT, LE_PIN);
+    GPIO_setOutputLowOnPin(HV_MUX_LE_PORT, HV_MUX_LE_PIN);
 
     // Wait
     __delay_cycles(DELAY_CYCLES);
 
     // Pull ~LE High
-    GPIO_setOutputHighOnPin(LE_PIN_PORT, LE_PIN);
+    GPIO_setOutputHighOnPin(HV_MUX_LE_PORT, HV_MUX_LE_PIN);
 
+}
+
+void rxSpiSend(uint8_t byte)
+{
+    // Write a byte
+    UCB1TXBUF = byte;
+    // Wait until the byte is sent
+    while(UCB1STAT & UCBBUSY);
 }
