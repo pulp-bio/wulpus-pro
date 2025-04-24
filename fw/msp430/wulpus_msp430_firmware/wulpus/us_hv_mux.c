@@ -21,6 +21,8 @@
 #include "us_hv_mux.h"
 #include "us_spi.h"
 
+static uint8_t ignore_nxt_le_evt = 0;
+
 void hvMuxInit(void)
 {
     // HV MUX Initialization
@@ -104,15 +106,30 @@ void hvMuxConfRx(uint16_t rx_config)
 // shift registers into the latches and turns on switches
 void hvMuxLatchOutput(void)
 {
-    // Pull ~LE Low to latch the signal
-    GPIO_setOutputLowOnPin(HV_MUX_LE_PORT, HV_MUX_LE_PIN);
+    // Check the flag to ignore latch event
+    if (!ignore_nxt_le_evt)
+    {
+        // Pull ~LE Low to latch the signal
+        GPIO_setOutputLowOnPin(HV_MUX_LE_PORT, HV_MUX_LE_PIN);
 
-    // Wait
-    __delay_cycles(DELAY_CYCLES);
+        // Wait
 
-    // Pull ~LE High
-    GPIO_setOutputHighOnPin(HV_MUX_LE_PORT, HV_MUX_LE_PIN);
+        __delay_cycles(DELAY_CYCLES);
 
+        // Pull ~LE High
+        GPIO_setOutputHighOnPin(HV_MUX_LE_PORT, HV_MUX_LE_PIN);
+    }
+    else
+    {
+        // Clear the flag
+        ignore_nxt_le_evt = 0;
+    }
+
+}
+
+void hvMuxIgnoreNxtLatchEvt(void)
+{
+    ignore_nxt_le_evt = 1;
 }
 
 void rxSpiSend(uint8_t byte)

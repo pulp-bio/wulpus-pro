@@ -200,11 +200,21 @@ static void usAcquisitionLoop(void)
 
             // Configure TX config (applied immediately)
             hvMuxConfTx(msp_config.txConfigs[tx_rx_id]);
-            // Configure RX config (loaded into shift register but not latched)
-            // Latching will occur in the timer interrupt after completion
-            // of pulse generation
-            hvMuxConfRx(msp_config.rxConfigs[tx_rx_id]);
-            // Enable HV pulser (switch HiZ state off)
+
+            // Check if TX and RX configs are identical
+            if (msp_config.txConfigs[tx_rx_id] == msp_config.rxConfigs[tx_rx_id])
+            {
+                // Instruct the driver to ignore the next latch event
+                hvMuxIgnoreNxtLatchEvt();
+            }
+            else
+            {
+                // Configure RX config (loaded into shift register but not latched)
+                // Latching will occur in the timer interrupt after completion
+                // of pulse generation
+                hvMuxConfRx(msp_config.rxConfigs[tx_rx_id]);
+            }
+            // Switch HV pulser from HiZ to active state
             enableHvPulser();
 
             // Trigger ultrasound acquisition
@@ -313,11 +323,11 @@ static void slowTimerCc2Callback(void)
 
 static void fastTimerCc0Callback(void)
 {
-    // Switch HV Mux
-    hvMuxLatchOutput();
-
-    // Disable Pulser (switch to HiZ state)
+    // First, disable Pulser (switch to HiZ state)
     disableHvPulser();
+
+    // Second, Switch HV Mux (has internal delay)
+    hvMuxLatchOutput();
 
     // Disable HV DC-DC (we don't need switching at this point)
 //    disableHvDcDc();

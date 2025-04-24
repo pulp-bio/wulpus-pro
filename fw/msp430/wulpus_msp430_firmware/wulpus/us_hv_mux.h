@@ -23,8 +23,8 @@
 
 #include "driverlib.h"
 
-// Delay in MCLK cycles
-#define DELAY_CYCLES    2
+// Delay in MCLK cycles (should be at least 12 ns according to HV2707 datasheet)
+#define DELAY_CYCLES    1
 
 
 #define HV_MUX_LE_PORT     GPIO_PORT_P7
@@ -45,5 +45,8 @@ void rxSpiSend(uint8_t byte);
 // Transition from High to Low  transfers the contents of the
 // shift registers into the latches and turn on switches
 void hvMuxLatchOutput(void);
+
+// Instructs the driver to ignore the next latch event
+void hvMuxIgnoreNxtLatchEvt(void);
 
 #endif /* US_HV_MUX_H_ */
