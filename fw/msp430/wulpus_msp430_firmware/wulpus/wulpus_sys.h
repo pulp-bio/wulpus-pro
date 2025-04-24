@@ -28,60 +28,67 @@
 #include "uslib.h"
 
 // Defines for LED on Acquisition PCB
-#define GPIO_PORT_LED_MSP430       GPIO_PORT_P4
-#define GPIO_PIN_LED_MSP430        GPIO_PIN1
+#define GPIO_PORT_LED_MSP430        GPIO_PORT_P4
+#define GPIO_PIN_LED_MSP430         GPIO_PIN1
 
 // Defines for BLE connection ready signal
-#define GPIO_PORT_BLE_READY        GPIO_PORT_P5
-#define GPIO_PIN_BLE_READY         GPIO_PIN7
+#define GPIO_PORT_BLE_READY         GPIO_PORT_P5
+#define GPIO_PIN_BLE_READY          GPIO_PIN7
 
 
 // New for WULPUS PRO (Apr-May 2025)
 
 // Preamp control
-#define GPIO_PORT_PREAMP_PWR_EN    GPIO_PORT_P1
-#define GPIO_PIN_PREAMP_PWR_EN     GPIO_PIN5
+#define GPIO_PORT_PREAMP_PWR_EN     GPIO_PORT_P1
+#define GPIO_PIN_PREAMP_PWR_EN      GPIO_PIN5
 
-#define GPIO_PORT_PREAMP_EN        GPIO_PORT_P1
-#define GPIO_PIN_PREAMP_EN         GPIO_PIN3
+#define GPIO_PORT_PREAMP_EN         GPIO_PORT_P1
+#define GPIO_PIN_PREAMP_EN          GPIO_PIN3
 
 // VGA control
-#define GPIO_PORT_VGA_PWR_EN       GPIO_PORT_P1
-#define GPIO_PIN_VGA_PWR_EN        GPIO_PIN2
+#define GPIO_PORT_VGA_PWR_EN        GPIO_PORT_P1
+#define GPIO_PIN_VGA_PWR_EN         GPIO_PIN2
 
-#define GPIO_PORT_VGA_RC_EN        GPIO_PORT_P1
-#define GPIO_PIN_VGA_RC_EN         GPIO_PIN0
+#define GPIO_PORT_VGA_RC_EN         GPIO_PORT_P1
+#define GPIO_PIN_VGA_RC_EN          GPIO_PIN0
 
-#define GPIO_PORT_VGA_RC_SINK      GPIO_PORT_P2
-#define GPIO_PIN_VGA_RC_SINK       GPIO_PIN2
+#define GPIO_PORT_VGA_RC_SINK       GPIO_PORT_P2
+#define GPIO_PIN_VGA_RC_SINK        GPIO_PIN2
 
 // Envelope Detector
-#define GPIO_PORT_ENV_DET_EN       GPIO_PORT_P1
-#define GPIO_PIN_ENV_DET_EN        GPIO_PIN4
+#define GPIO_PORT_ENV_DET_EN        GPIO_PORT_P1
+#define GPIO_PIN_ENV_DET_EN         GPIO_PIN4
 
 // Low Pass filter
-#define GPIO_PORT_LP_FILT_EN       GPIO_PORT_P3
-#define GPIO_PIN_LP_FILT_EN        GPIO_PIN1
+#define GPIO_PORT_LP_FILT_EN        GPIO_PORT_P3
+#define GPIO_PIN_LP_FILT_EN         GPIO_PIN1
 
 // HV DC DC
-#define GPIO_PORT_HV_DCDC_EN       GPIO_PORT_P3
-#define GPIO_PIN_HV_DCDC_EN        GPIO_PIN5
+#define GPIO_PORT_HV_DCDC_EN        GPIO_PORT_P3
+#define GPIO_PIN_HV_DCDC_EN         GPIO_PIN5
 
-#define GPIO_PORT_HV_POS_EN        GPIO_PORT_P3
-#define GPIO_PIN_HV_POS_EN         GPIO_PIN3
+#define GPIO_PORT_HV_POS_EN         GPIO_PORT_P3
+#define GPIO_PIN_HV_POS_EN          GPIO_PIN3
 
-#define GPIO_PORT_HV_NEG_EN        GPIO_PORT_P3
-#define GPIO_PIN_HV_NEG_EN         GPIO_PIN4
+#define GPIO_PORT_HV_NEG_EN         GPIO_PORT_P3
+#define GPIO_PIN_HV_NEG_EN          GPIO_PIN4
 
 // HV MUX Power Enable
-#define GPIO_PORT_HV_MUX_PWR_EN    GPIO_PORT_P6
-#define GPIO_PIN_HV_MUX_PWR_EN     GPIO_PIN5
+#define GPIO_PORT_HV_MUX_PWR_EN     GPIO_PORT_P6
+#define GPIO_PIN_HV_MUX_PWR_EN      GPIO_PIN5
 
-#define GPIO_PORT_PULSER_HIZ_EN_N  GPIO_PORT_P6
-#define GPIO_PIN_PULSER_HIZ_EN_N   GPIO_PIN2
+#define GPIO_PORT_PULSER_HIZ_EN_N   GPIO_PORT_P6
+#define GPIO_PIN_PULSER_HIZ_EN_N    GPIO_PIN2
 
+// VGA Gain control
+#define GPIO_PORT_VGA_GAIN_RC_EN    GPIO_PORT_P1
+#define GPIO_PIN_VGA_GAIN_RC_EN     GPIO_PIN0
 
+#define GPIO_PORT_VGA_GAIN_CS_N     GPIO_PORT_P1
+#define GPIO_PIN_VGA_GAIN_CS_N      GPIO_PIN1
 
+#define GPIO_PORT_VGA_GAIN_RC_SINK  GPIO_PORT_P2
+#define GPIO_PIN_VGA_GAIN_RC_SINK   GPIO_PIN2
 
 
 

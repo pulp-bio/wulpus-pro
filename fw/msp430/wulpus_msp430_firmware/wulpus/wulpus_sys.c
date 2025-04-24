@@ -191,6 +191,10 @@ void initAllPowerSwitches(void)
     GPIO_setAsOutputPin(GPIO_PORT_PULSER_HIZ_EN_N, GPIO_PIN_PULSER_HIZ_EN_N);
     GPIO_setOutputLowOnPin(GPIO_PORT_PULSER_HIZ_EN_N, GPIO_PIN_PULSER_HIZ_EN_N);
 
+    // Chip select of the Digipot is disabled by default
+    GPIO_setAsOutputPin(GPIO_PORT_VGA_GAIN_CS_N, GPIO_PIN_VGA_GAIN_CS_N);
+    GPIO_setOutputHighOnPin(GPIO_PORT_VGA_GAIN_CS_N, GPIO_PIN_VGA_GAIN_CS_N);
+
     return;
 }
 

@@ -36,7 +36,6 @@ void hvMuxInit(void)
     GPIO_setOutputLowOnPin(HV_MUX_CLR_PORT, HV_MUX_CLR_PIN);
 
 
-
     // Configure SPI pins
     // Select Port 5
     // Set Pin 4 to output peripheral function, SPI CLK: SW_CLK
@@ -44,6 +43,12 @@ void hvMuxInit(void)
     GPIO_setAsPeripheralModuleFunctionOutputPin(
         GPIO_PORT_P5,
         GPIO_PIN4 + GPIO_PIN5,
+        GPIO_SECONDARY_MODULE_FUNCTION);
+
+    // Configure MISO pin
+    GPIO_setAsPeripheralModuleFunctionInputPin(
+        GPIO_PORT_P5,
+        GPIO_PIN6,
         GPIO_SECONDARY_MODULE_FUNCTION);
 
 
