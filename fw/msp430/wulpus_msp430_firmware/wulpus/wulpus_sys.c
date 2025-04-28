@@ -191,9 +191,19 @@ void initAllPowerSwitches(void)
     GPIO_setAsOutputPin(GPIO_PORT_PULSER_HIZ_EN_N, GPIO_PIN_PULSER_HIZ_EN_N);
     GPIO_setOutputLowOnPin(GPIO_PORT_PULSER_HIZ_EN_N, GPIO_PIN_PULSER_HIZ_EN_N);
 
-    // Chip select of the Digipot is disabled by default
+    // Digipot chip select is disabled by default
     GPIO_setAsOutputPin(GPIO_PORT_VGA_GAIN_CS_N, GPIO_PIN_VGA_GAIN_CS_N);
     GPIO_setOutputHighOnPin(GPIO_PORT_VGA_GAIN_CS_N, GPIO_PIN_VGA_GAIN_CS_N);
+
+    // Digipot RC Enable (disabled by default, set to 0)
+    GPIO_setAsOutputPin(GPIO_PORT_VGA_GAIN_RC_EN, GPIO_PIN_VGA_GAIN_RC_EN);
+    GPIO_setOutputLowOnPin(GPIO_PORT_VGA_GAIN_RC_EN, GPIO_PIN_VGA_GAIN_RC_EN);
+
+    // Digipot sink signal (output by default, set to 0)
+    GPIO_setAsOutputPin(GPIO_PORT_VGA_GAIN_RC_SINK, GPIO_PIN_VGA_GAIN_RC_SINK);
+    GPIO_setOutputLowOnPin(GPIO_PORT_VGA_GAIN_RC_SINK, GPIO_PIN_VGA_GAIN_RC_SINK);
+
+
 
     return;
 }
@@ -420,6 +430,49 @@ void disableHvPulser(void)
 {
     GPIO_setOutputHighOnPin(GPIO_PORT_PULSER_HIZ_EN_N, GPIO_PIN_PULSER_HIZ_EN_N);
     return;
+}
+
+
+void vgaDigipotSetWiperCode(uint8_t code)
+{
+    //Enable chip select
+    GPIO_setAsOutputPin(GPIO_PORT_VGA_GAIN_CS_N, GPIO_PIN_VGA_GAIN_CS_N);
+    GPIO_setOutputLowOnPin(GPIO_PORT_VGA_GAIN_CS_N, GPIO_PIN_VGA_GAIN_CS_N);
+
+    // Send code over RX SPI
+    rxSpiSend(code);
+
+    // Disable chip select
+    GPIO_setAsOutputPin(GPIO_PORT_VGA_GAIN_CS_N, GPIO_PIN_VGA_GAIN_CS_N);
+    GPIO_setOutputHighOnPin(GPIO_PORT_VGA_GAIN_CS_N, GPIO_PIN_VGA_GAIN_CS_N);
+}
+
+void vgaDigipotRcEnable(void)
+{
+    // Put sink pin to high impedance
+    GPIO_setAsInputPin(GPIO_PORT_VGA_GAIN_RC_SINK, GPIO_PIN_VGA_GAIN_RC_SINK);
+
+    // Set RC Enable pin high
+    GPIO_setAsOutputPin(GPIO_PORT_VGA_GAIN_RC_EN, GPIO_PIN_VGA_GAIN_RC_EN);
+    GPIO_setOutputHighOnPin(GPIO_PORT_VGA_GAIN_RC_EN, GPIO_PIN_VGA_GAIN_RC_EN);
+}
+
+
+void vgaDigipotSinkEnable(void)
+{
+    // Set RC Enable pin to high impedance
+    GPIO_setAsInputPin(GPIO_PORT_VGA_GAIN_RC_EN, GPIO_PIN_VGA_GAIN_RC_EN);
+
+    // Put sink pin to output, set 0
+    GPIO_setOutputLowOnPin(GPIO_PORT_VGA_GAIN_RC_SINK, GPIO_PIN_VGA_GAIN_RC_SINK);
+    GPIO_setAsOutputPin(GPIO_PORT_VGA_GAIN_RC_SINK, GPIO_PIN_VGA_GAIN_RC_SINK);
+}
+
+void vgaDigipotFixGain(void)
+{
+    // Set both pins to high impedance mode
+    GPIO_setAsInputPin(GPIO_PORT_VGA_GAIN_RC_EN, GPIO_PIN_VGA_GAIN_RC_EN);
+    GPIO_setAsInputPin(GPIO_PORT_VGA_GAIN_RC_SINK, GPIO_PIN_VGA_GAIN_RC_SINK);
 }
 
 

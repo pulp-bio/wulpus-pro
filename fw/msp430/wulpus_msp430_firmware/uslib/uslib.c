@@ -651,9 +651,18 @@ void confTimerFastSwEvents(void)
                   false,
                   false);
 
+
+    // Configure the time to enable VGA gain RC network
+    timerSetCcReg(TIMER_FAST_BASE,
+                  config.startHvMuxRxCnt - 82,
+                  OFS_TAxCCR2,
+                  false,
+                  false);
+
     // Clear interrupt flags
     timerClearCcIntFlag(TIMER_FAST_BASE, OFS_TAxCCTL0);
     timerClearCcIntFlag(TIMER_FAST_BASE, OFS_TAxCCTL1);
+    timerClearCcIntFlag(TIMER_FAST_BASE, OFS_TAxCCTL2);
 
     // Enable interrupts
     timerEnableCcInt(TIMER_FAST_BASE, OFS_TAxCCTL1);
@@ -666,6 +675,7 @@ void startTimerFast(void)
     // Configure interrupts
     timerClearCcIntFlag(TIMER_FAST_BASE, OFS_TAxCCTL0);
     timerClearCcIntFlag(TIMER_FAST_BASE, OFS_TAxCCTL1);
+    timerClearCcIntFlag(TIMER_FAST_BASE, OFS_TAxCCTL2);
 
     timerEnableCcInt(TIMER_FAST_BASE, OFS_TAxCCTL1);
     timerDisableCcInt(TIMER_FAST_BASE, OFS_TAxCCTL0);
@@ -692,7 +702,11 @@ void triggerAcqTimerFastEvent(void)
     timerClearCcIntFlag(TIMER_FAST_BASE, OFS_TAxCCTL0);
     timerEnableCcInt(TIMER_FAST_BASE, OFS_TAxCCTL0);
 
-    // Start timer in continuous mode from 0
+    // (WULPUS PRO 25.04.25) Also enable the CC2 interrupt for VGA RC network enable
+    timerClearCcIntFlag(TIMER_FAST_BASE, OFS_TAxCCTL2);
+    timerEnableCcInt(TIMER_FAST_BASE, OFS_TAxCCTL2);
+
+
     // Start timer in continuous mode from 0
     timerSetCcReg(TIMER_FAST_BASE, 0,
                   OFS_TAxR,

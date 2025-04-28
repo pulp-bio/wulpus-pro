@@ -51,6 +51,7 @@ static void hsPllUnlockCallback(void);
 static void saphSeqAcqDoneCallback(void);
 static void slowTimerCc2Callback(void);
 static void fastTimerCc0Callback(void);
+static void fastTimerCc2Callback(void);
 
 int main(void)
 {
@@ -140,6 +141,8 @@ void configAfterPowerUp(void)
     // Timer Fast CC0 callback switches HV MUX to receive,
     // stops the DC-DC converter and the Fast timer
     TIMER_FAST_CCR0_CALLBACK = &fastTimerCc0Callback;
+    // Timer Fast CC2 callback Enables VGA gain RC network
+    TIMER_FAST_CCR2_CALLBACK = &fastTimerCc2Callback;
 
     // Hook other callbacks
     HS_PLL_UNLOCK_CALLBACK = &hsPllUnlockCallback;
@@ -198,6 +201,19 @@ static void usAcquisitionLoop(void)
             meas_header[3] = (uint8_t) (meas_frame_nr >> 8);
             memcpy((uint16_t *) 0x4000, &meas_header, 4);
 
+
+            // Configure VGA Start gain
+            // Set 100 k
+            vgaDigipotSetWiperCode(0);
+            vgaDigipotRcEnable();
+
+            // Approximately 0.1 V, assuming 3.3 nF, 2.7k resistance + 100k, 3.3V MSP
+            __delay_cycles(150);
+            // Fix gain and load next code
+            vgaDigipotFixGain();
+            vgaDigipotSetWiperCode(0);
+
+
             // Configure TX config (applied immediately)
             hvMuxConfTx(msp_config.txConfigs[tx_rx_id]);
 
@@ -226,7 +242,7 @@ static void usAcquisitionLoop(void)
                 continue;
             }
 
-            // If instead aquisition sequencer finished as expected
+            // If instead acquisition sequencer finished as expected
             // and we reached this line, then
             // wait for the SPI DMA transaction to be completed
 
@@ -298,6 +314,9 @@ static void saphSeqAcqDoneCallback(void)
     // WULPUS Pro (17.04.25)
     disableAll();
 
+    // SInk all charge from VGA gain input
+    vgaDigipotSinkEnable();
+
     // if PLL unlock event occurs earlier the acquisition might be not valid
     if (isEventFlagSet(HS_PLL_UNLOCK_EVENT) == false)
     {
@@ -329,8 +348,16 @@ static void fastTimerCc0Callback(void)
     // Second, Switch HV Mux (has internal delay)
     hvMuxLatchOutput();
 
+//    vgaDigipotRcEnable();
+
     // Disable HV DC-DC (we don't need switching at this point)
 //    disableHvDcDc();
     // Disable Fast Timer
     timerFastStop();
+}
+
+static void fastTimerCc2Callback(void)
+{
+    // Enable RC network for VGA gain control
+//    vgaDigipotRcEnable();
 }

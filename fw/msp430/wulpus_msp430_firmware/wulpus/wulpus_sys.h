@@ -189,4 +189,9 @@ void disableHvPulser(void);
 void enableAll(void);
 void disableAll(void);
 
+void vgaDigipotSetWiperCode(uint8_t code);
+void vgaDigipotRcEnable(void);
+void vgaDigipotSinkEnable(void);
+void vgaDigipotFixGain(void);
+
 #endif /* WULPUS_SYS_H_ */
