@@ -679,6 +679,7 @@ void startTimerFast(void)
 
     timerEnableCcInt(TIMER_FAST_BASE, OFS_TAxCCTL1);
     timerDisableCcInt(TIMER_FAST_BASE, OFS_TAxCCTL0);
+    timerDisableCcInt(TIMER_FAST_BASE, OFS_TAxCCTL2);
 
     // Start timer in continuous mode from 0
     timerSetCcReg(TIMER_FAST_BASE, 0,

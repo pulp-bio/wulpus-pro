@@ -132,6 +132,27 @@ void hvMuxLatchOutput(void)
 
 }
 
+void hvMuxLatchHighToLow(void)
+{
+    // Check the flag to ignore latch event
+    if (!ignore_nxt_le_evt)
+    {
+        // Pull ~LE Low to latch the signal
+        GPIO_setOutputLowOnPin(HV_MUX_LE_PORT, HV_MUX_LE_PIN);
+    }
+    else
+    {
+        // Clear the flag
+        ignore_nxt_le_evt = 0;
+    }
+}
+
+void hvMuxLatchLowToHigh(void)
+{
+    // Pull ~LE High
+    GPIO_setOutputHighOnPin(HV_MUX_LE_PORT, HV_MUX_LE_PIN);
+}
+
 void hvMuxIgnoreNxtLatchEvt(void)
 {
     ignore_nxt_le_evt = 1;

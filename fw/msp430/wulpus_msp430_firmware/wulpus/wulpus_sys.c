@@ -453,8 +453,8 @@ void vgaDigipotRcEnable(void)
     GPIO_setAsInputPin(GPIO_PORT_VGA_GAIN_RC_SINK, GPIO_PIN_VGA_GAIN_RC_SINK);
 
     // Set RC Enable pin high
-    GPIO_setAsOutputPin(GPIO_PORT_VGA_GAIN_RC_EN, GPIO_PIN_VGA_GAIN_RC_EN);
     GPIO_setOutputHighOnPin(GPIO_PORT_VGA_GAIN_RC_EN, GPIO_PIN_VGA_GAIN_RC_EN);
+    GPIO_setAsOutputPin(GPIO_PORT_VGA_GAIN_RC_EN, GPIO_PIN_VGA_GAIN_RC_EN);
 }
 
 
@@ -470,7 +470,7 @@ void vgaDigipotSinkEnable(void)
 
 void vgaDigipotFixGain(void)
 {
-    // Set both pins to high impedance mode
+    // Set RC gain enable pin to high impedance mode
     GPIO_setAsInputPin(GPIO_PORT_VGA_GAIN_RC_EN, GPIO_PIN_VGA_GAIN_RC_EN);
     GPIO_setAsInputPin(GPIO_PORT_VGA_GAIN_RC_SINK, GPIO_PIN_VGA_GAIN_RC_SINK);
 }

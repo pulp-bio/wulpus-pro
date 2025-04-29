@@ -126,6 +126,7 @@ void configAfterPowerUp(void)
     // Init timers
     timerSlowInit();
     timerFastInit();
+    timerUsDelayInit();
 
     // Hook timers-related callback
 
@@ -203,15 +204,18 @@ static void usAcquisitionLoop(void)
 
 
             // Configure VGA Start gain
+            timerUsDelayStart();
             // Set 100 k
             vgaDigipotSetWiperCode(0);
             vgaDigipotRcEnable();
 
             // Approximately 0.1 V, assuming 3.3 nF, 2.7k resistance + 100k, 3.3V MSP
-            __delay_cycles(150);
+            timerUsDelayCycles(0);
             // Fix gain and load next code
             vgaDigipotFixGain();
-            vgaDigipotSetWiperCode(0);
+            vgaDigipotSetWiperCode(180);
+            timerUsDelayStop();
+
 
 
             // Configure TX config (applied immediately)
@@ -342,13 +346,19 @@ static void slowTimerCc2Callback(void)
 
 static void fastTimerCc0Callback(void)
 {
-    // First, disable Pulser (switch to HiZ state)
+
+    // Switch HV Mux (has internal delay)
+//    hvMuxLatchOutput();
+    // New approach for faster latching
+    hvMuxLatchHighToLow();
+
+    // disable Pulser (switch to HiZ state)
     disableHvPulser();
 
-    // Second, Switch HV Mux (has internal delay)
-    hvMuxLatchOutput();
+    vgaDigipotRcEnable();
 
-//    vgaDigipotRcEnable();
+    // New approach for faster latching
+    hvMuxLatchLowToHigh();
 
     // Disable HV DC-DC (we don't need switching at this point)
 //    disableHvDcDc();

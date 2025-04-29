@@ -140,11 +140,13 @@ void timerSlowDelay(uint16_t delay, uint16_t lpmBits)
     return;
 }
 
+
+// Fast timer for US acquisition
 void timerFastInit(void)
 {
     // Clear
     HWREG16(TIMER_FAST_BASE + OFS_TAxCTL) |= TACLR;
-    // Clock from ACLK, divider = 1, counts up to 0xFFFF
+    // Clock from SMCLK, divider = 1, counts up to 0xFFFF
     HWREG16(TIMER_FAST_BASE + OFS_TAxCTL) =
     (TASSEL__SMCLK | ID__1 | MC__STOP);
     // Extra divider = 1
@@ -157,6 +159,43 @@ void timerFastStop(void)
 {
     timerStop(TIMER_FAST_BASE);
     return;
+}
+
+// Time for microsecond delays
+void timerUsDelayInit(void)
+{
+    // Clear
+    HWREG16(TIMER_US_DELAY_BASE + OFS_TAxCTL) |= TACLR;
+    // Clock from ACLK, divider = 1, counts up to 0xFFFF
+    HWREG16(TIMER_US_DELAY_BASE + OFS_TAxCTL) =
+    (TASSEL__SMCLK | ID__1 | MC__STOP);
+    // Extra divider = 1
+    HWREG16(TIMER_US_DELAY_BASE + OFS_TAxEX0) = (TAIDEX_0);
+
+    return;
+}
+
+void timerUsDelayStart(void)
+{
+    // Clear
+    HWREG16(TIMER_US_DELAY_BASE + OFS_TAxCTL) |= TACLR;
+    // Start continuous
+    timerStartContinuous(TIMER_US_DELAY_BASE);
+}
+
+void timerUsDelayStop(void)
+{
+    timerStop(TIMER_US_DELAY_BASE);
+    return;
+}
+
+void timerUsDelayCycles(uint16_t delay_cycles)
+{
+    // Clear
+    HWREG16(TIMER_US_DELAY_BASE + OFS_TAxCTL) |= TACLR;
+
+    // Wait
+    while(HWREG16(TIMER_US_DELAY_BASE + OFS_TAxR) <= delay_cycles);
 }
 
 
@@ -392,6 +431,24 @@ __interrupt void timerFastCc1Int(void)
     }
 
     LPM4_EXIT;
+}
+
+#pragma vector = TIMER_US_DELAY_CC0_VECTOR
+__interrupt void timerUsDelayCc0Int(void)
+{
+
+//    // Set Event flag
+//    setEventFlag(TIMER_US_DELAY_CCR0_EVENT);
+//
+//    // Clear Interrupt flag
+//    timerClearCcIntFlag(TIMER_US_DELAY_BASE, OFS_TAxCCTL0);
+//
+//    if (TIMER_US_DELAY_CCR0_CALLBACK)
+//    {
+//        TIMER_US_DELAY_CCR0_CALLBACK();
+//    }
+//
+//    LPM4_EXIT;
 }
 
 #pragma vector = HSPLL_VECTOR

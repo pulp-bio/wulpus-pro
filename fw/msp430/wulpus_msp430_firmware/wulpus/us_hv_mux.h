@@ -46,6 +46,9 @@ void rxSpiSend(uint8_t byte);
 // shift registers into the latches and turn on switches
 void hvMuxLatchOutput(void);
 
+void hvMuxLatchHighToLow(void);
+void hvMuxLatchLowToHigh(void);
+
 // Instructs the driver to ignore the next latch event
 void hvMuxIgnoreNxtLatchEvt(void);
 

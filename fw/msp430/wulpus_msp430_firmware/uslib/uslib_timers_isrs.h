@@ -43,6 +43,12 @@
 #define TIMER_FAST_CC0_VECTOR    (TIMER0_A0_VECTOR)
 #define TIMER_FAST_CC1_VECTOR    (TIMER0_A1_VECTOR)
 
+
+// uS delay timer Timer clocked from SMCLK
+#define TIMER_US_DELAY_BASE          (TIMER_A2_BASE)
+#define TIMER_US_DELAY_CC0_VECTOR    (TIMER2_A0_VECTOR)
+#define TIMER_US_DELAY_CC1_VECTOR    (TIMER2_A1_VECTOR)
+
 // Callbacks
 extern void (*TIMER_SLOW_CCR0_CALLBACK)(void);
 extern void (*TIMER_SLOW_CCR1_CALLBACK)(void);
@@ -51,6 +57,10 @@ extern void (*TIMER_SLOW_CCR2_CALLBACK)(void);
 extern void (*TIMER_FAST_CCR0_CALLBACK)(void);
 extern void (*TIMER_FAST_CCR1_CALLBACK)(void);
 extern void (*TIMER_FAST_CCR2_CALLBACK)(void);
+
+extern void (*TIMER_US_DELAY_CCR0_CALLBACK)(void);
+extern void (*TIMER_US_DELAY_CCR1_CALLBACK)(void);
+
 
 extern void (*HS_PLL_UNLOCK_CALLBACK)       (void);
 extern void (*UUPS_PWR_UP_TIMEOUT_CALLBACK) (void);
@@ -66,6 +76,9 @@ extern void (*SAPH_PNGND_CALLBACK)          (void);
 #define TIMER_SLOW_CCR0_EVENT        (1<<0)
 #define TIMER_SLOW_CCR1_EVENT        (1<<1)
 #define TIMER_SLOW_CCR2_EVENT        (1<<2)
+
+#define TIMER_US_DELAY_CCR0_EVENT    (1<<4)
+#define TIMER_US_DELAY_CCR1_EVENT    (1<<5)
 
 #define TIMER_FAST_CCR0_EVENT        (1<<6)
 #define TIMER_FAST_CCR1_EVENT        (1<<7)
@@ -90,6 +103,12 @@ void timerSlowDelay(uint16_t delay, uint16_t lpmBits);
 
 void timerFastInit(void);
 void timerFastStop(void);
+
+void timerUsDelayInit(void);
+void timerUsDelayStart(void);
+void timerUsDelayStop(void);
+// Blocking function
+void timerUsDelayCycles(uint16_t delay_cycles);
 
 //// Timer-based Low Level Routines ////
 // Set capture compare register
