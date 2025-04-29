@@ -38,6 +38,9 @@ msp_config_t msp_config;
 // TX RX active config ID
 uint8_t tx_rx_id = 0;
 
+// VGA fixed gain mode flag
+uint8_t vga_fixed_gain = 1;
+
 // A routine to get configuration package from nRF
 static void getConfigPack(void);
 
@@ -203,19 +206,33 @@ static void usAcquisitionLoop(void)
             memcpy((uint16_t *) 0x4000, &meas_header, 4);
 
 
-            // Configure VGA Start gain
-            timerUsDelayStart();
-            // Set 100 k
-            vgaDigipotSetWiperCode(0);
-            vgaDigipotRcEnable();
+            // Configure VGA Gain Settings
 
-            // Approximately 0.1 V, assuming 3.3 nF, 2.7k resistance + 100k, 3.3V MSP
-            timerUsDelayCycles(0);
-            // Fix gain and load next code
+            timerUsDelayStart();
+            if (msp_config.vgaRcPrechargeCycles != 0)
+            {
+                // Set 100 k
+                vgaDigipotSetWiperCode(0);
+                vgaDigipotRcEnable();
+
+                // Approximately 0.1 V, assuming 3.3 nF, 2.7k resistance + 100k, 3.3V MSP
+                timerUsDelayCycles(msp_config.vgaRcPrechargeCycles);
+            }
+
+            // Fix gain
             vgaDigipotFixGain();
-            vgaDigipotSetWiperCode(180);
             timerUsDelayStop();
 
+            // Load the wiper code responsible for TGC gain slope
+            if(msp_config.vgaRcGainSlopeWiperCode <= 255)
+            {
+                vgaDigipotSetWiperCode(msp_config.vgaRcGainSlopeWiperCode);
+                vga_fixed_gain = 0;
+            }
+            else
+            {
+                vga_fixed_gain = 1;
+            }
 
 
             // Configure TX config (applied immediately)
@@ -355,7 +372,10 @@ static void fastTimerCc0Callback(void)
     // disable Pulser (switch to HiZ state)
     disableHvPulser();
 
-    vgaDigipotRcEnable();
+    if (!vga_fixed_gain)
+    {
+        vgaDigipotRcEnable();
+    }
 
     // New approach for faster latching
     hvMuxLatchLowToHigh();

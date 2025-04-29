@@ -55,6 +55,10 @@ void getDefaultUsConfig(msp_config_t * msp_config)
     msp_config->rxGain = PGA_GAIN_9_0_DB;
     msp_config->measPeriod = 32768;
 
+    // VGA settings
+    msp_config->vgaRcPrechargeCycles = 0;
+    msp_config->vgaRcGainSlopeWiperCode = 256;
+
     // TX/RX configurations
     msp_config->txRxConfLen = 0;
 //    msp_config->txConfigs[TX_RX_CONF_LEN_MAX];
@@ -109,13 +113,15 @@ bool extractUsConfig(uint8_t * spi_rx, msp_config_t * msp_config)
     uint8_t offset = 20 + 4*(msp_config->txRxConfLen);
 
     // Copy the data from the Advanced settings section
-    msp_config->startHvMuxRxCnt   = READ_uint16(spi_rx + offset);
-    msp_config->startPpgCnt       = READ_uint16(spi_rx + offset + 2);
-    msp_config->turnOnAdcCnt      = READ_uint16(spi_rx + offset + 4);
-    msp_config->startPgaInBiasCnt = READ_uint16(spi_rx + offset + 6);
-    msp_config->startAdcSamplCnt  = READ_uint16(spi_rx + offset + 8);
-    msp_config->restartCaptCnt    = READ_uint16(spi_rx + offset + 10);
-    msp_config->captTimeoutCnt    = READ_uint16(spi_rx + offset + 12);
+    msp_config->startHvMuxRxCnt         = READ_uint16(spi_rx + offset);
+    msp_config->startPpgCnt             = READ_uint16(spi_rx + offset + 2);
+    msp_config->turnOnAdcCnt            = READ_uint16(spi_rx + offset + 4);
+    msp_config->startPgaInBiasCnt       = READ_uint16(spi_rx + offset + 6);
+    msp_config->startAdcSamplCnt        = READ_uint16(spi_rx + offset + 8);
+    msp_config->restartCaptCnt          = READ_uint16(spi_rx + offset + 10);
+    msp_config->captTimeoutCnt          = READ_uint16(spi_rx + offset + 12);
+    msp_config->vgaRcPrechargeCycles    = READ_uint16(spi_rx + offset + 14);
+    msp_config->vgaRcGainSlopeWiperCode = READ_uint16(spi_rx + offset + 16);
 
     return 1;
 }

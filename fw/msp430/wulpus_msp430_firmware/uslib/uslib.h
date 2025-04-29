@@ -217,6 +217,10 @@ typedef struct
     uint8_t  rxGain;
     uint16_t measPeriod;
 
+    // VGA gain settings
+    uint16_t vgaRcPrechargeCycles;
+    uint16_t vgaRcGainSlopeWiperCode;
+
     // TX/RX configurations
     uint8_t  txRxConfLen;
     uint16_t txConfigs[TX_RX_CONF_LEN_MAX];
