@@ -141,32 +141,40 @@ static void provisioner_event_handler(void *arg, esp_event_base_t event_base, in
         esp_wifi_sta_get_ap_info(&ap_info);
         ESP_LOGI(TAG, "Connected to SSID %s", (const char *)ap_info.ssid);
 
-        // wifi_phy_mode_t mode;
-        // ESP_ERROR_CHECK(esp_wifi_sta_get_negotiated_phymode(&mode));
-        // if (mode == WIFI_PHY_MODE_HE20)
-        // {
-        //     // Set up TWT
-        //     wifi_twt_setup_config_t config = {
-        //         .setup_cmd = TWT_REQUEST,
-        //         .flow_id = 0,
-        //         .twt_id = 0,
-        //         .flow_type = 0,
-        //         .min_wake_dura = 255,
-        //         .wake_duration_unit = 0,
-        //         .wake_invl_expn = 10,
-        //         .wake_invl_mant = 512,
-        //         .trigger = 1,
-        //         .timeout_time_ms = 5000};
-        //     esp_err_t status = esp_wifi_sta_itwt_setup(&config);
-        //     if (status != ESP_OK)
-        //     {
-        //         ESP_LOGE(TAG, "Failed to set up TWT: %d", status);
-        //     }
-        // }
-        // else
-        // {
-        //     ESP_LOGW(TAG, "Wi-Fi PHY mode is not HE20, TWT isn't supported");
-        // }
+        wifi_phy_mode_t mode;
+        ESP_ERROR_CHECK(esp_wifi_sta_get_negotiated_phymode(&mode));
+        if (mode == WIFI_PHY_MODE_HE20)
+        {
+            ESP_LOGI(TAG, "Wi-Fi PHY mode is HE20, TWT may be supported");
+            // Set up TWT
+            wifi_twt_setup_config_t config = {
+                .setup_cmd = TWT_REQUEST,
+                .flow_id = 0,
+                .twt_id = 0,
+                .flow_type = 0,
+                .min_wake_dura = 255,
+                .wake_duration_unit = 0,
+                .wake_invl_expn = 10,
+                .wake_invl_mant = 512,
+                .trigger = 1,
+                .timeout_time_ms = 5000};
+            esp_err_t status = esp_wifi_sta_itwt_setup(&config);
+            if (status != ESP_OK)
+            {
+                ESP_LOGE(TAG, "Failed to set up TWT: %d", status);
+            }
+            else
+            {
+                ESP_LOGI(TAG, "TWT setup successful");
+            }
+        }
+        else
+        {
+            ESP_LOGW(TAG, "Wi-Fi PHY mode is not HE20, TWT isn't supported");
+        }
+
+        // Set Wi-Fi power save mode to max modem
+        ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_MAX_MODEM));
 
         // Signal provisioning task that we are connected, but only after the restart after provisioning
         if (xEventGroupGetBits(provisioner_event_group) & PROVISIONER_DONE_EVENT)
