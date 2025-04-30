@@ -381,15 +381,11 @@ static void data_handler_task(void *pvParameters)
                     .tx_buffer = NULL,
                     .rx_buffer = spi_rx_buffer,
                 };
-                if (rx.rx_buffer == NULL)
-                {
-                    ESP_LOGE(TAG, "Failed to allocate memory for SPI transaction");
-                    continue;
-                }
                 esp_err_t ret = spi_device_transmit(spi, &rx);
                 if (ret != ESP_OK)
                 {
                     ESP_LOGE(TAG, "Error occurred during SPI reception: %s", esp_err_to_name(ret));
+                    bsp_update_led(STATUS_ERROR);
                     continue;
                 }
 
@@ -404,12 +400,14 @@ static void data_handler_task(void *pvParameters)
                 if (err < 0)
                 {
                     ESP_LOGE(TAG, "Error occurred during sending header: %s", strerror(errno));
+                    bsp_update_led(STATUS_ERROR);
                     continue;
                 }
                 err = send(response_socket.fd, response.data, response.data_length, 0);
                 if (err < 0)
                 {
                     ESP_LOGE(TAG, "Error occurred during sending data: %s", strerror(errno));
+                    bsp_update_led(STATUS_ERROR);
                     continue;
                 }
                 ESP_LOGI(TAG, "Data sent successfully");
