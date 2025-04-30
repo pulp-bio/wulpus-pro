@@ -26,6 +26,28 @@ START_BYTE_RESTART   = 251
 # Maximum length of the configuration package
 PACKAGE_LEN  = 72
 
+# VGA and Digipot Constants
+VGA_RC_SER_RES       = 2.7e3
+VGA_RC_CAP_VAL       = 3.3e-9
+DIGIPOT_TOT_RES      = 100e3 
+VGA_PREGAIN_RC       = (DIGIPOT_TOT_RES + VGA_RC_SER_RES)*VGA_RC_CAP_VAL
+
+# Pregain correction voltage (since MSP is slow, it adds extra charge on the capacitor)
+VGA_PREGAIN_CORRECTION_V = 0.117
+
+# Correction factor of RC EN with respect to expected HV switch to RX event
+VGA_RC_EN_DELAY_US = 9.5 + 11.5
+
+# Threshold after which (>=) MSP430 enters fixed gain mode
+VGA_SLOPE_CODE_FIXED_GAIN_MODE = 256
+
+def vga_volts_to_gain_db(input_v):
+    gain_db = (input_v - 0.1)*(40/0.5)
+    return gain_db
+
+def digipot_code_to_res(code):
+    res = (1 - code/256) * DIGIPOT_TOT_RES
+    return res
 
 class WulpusProUssConfig():
     """
@@ -138,6 +160,46 @@ class WulpusProUssConfig():
         self.capt_timeout_reg       = int(self.capt_timeout * us_to_ticks["capt_timeout"])
         self.vga_rc_prech_cyc_reg   = int(self.vga_rc_prech_cyc)
         self.vga_slope_code_reg     = int(self.vga_slope_code)
+
+
+    def calc_gain_curve(self):
+
+        # Init gain array
+        self.gain_curve_db = np.zeros(self.num_samples)
+
+
+         # Handle pregain calc safely
+        if self.vga_rc_prech_cyc == 0:
+            pregain_v = 0
+        else:
+            pregain_v = (self.vga_rc_prech_cyc / us_to_ticks["start_hvmuxrx"]) * 1e-6 * VGA_PREGAIN_RC + VGA_PREGAIN_CORRECTION_V
+
+        # Init gain array (+ add PGA)
+        self.gain_curve_db[:] = vga_volts_to_gain_db(pregain_v) + self.rx_gain
+
+        # Check if we operate in fixed gain mode
+        if (self.vga_slope_code >= VGA_SLOPE_CODE_FIXED_GAIN_MODE):
+            print("Fixed Gain Mode")
+            return
+        
+
+        # Calculate the time when the TGC linear slope gets activated
+        inflection_id = np.int((self.start_hvmuxrx - self.start_adcsampl + VGA_RC_EN_DELAY_US)/1e6 * self.sampling_freq)
+
+        if inflection_id >= self.num_samples or inflection_id < 0:
+            print("Inflection point is out of range")
+            return
+
+        # Calculae TGC slope
+        rc_slope = (VGA_RC_SER_RES + digipot_code_to_res(self.vga_slope_code)) * VGA_RC_CAP_VAL
+
+        # Assumes charging from 3.3V IO
+        temp_arr_v = 3.3*(np.arange(self.num_samples - inflection_id)/self.sampling_freq / rc_slope)
+
+        # Update the gain curve
+        self.gain_curve_db[inflection_id:] = vga_volts_to_gain_db(temp_arr_v + pregain_v) + self.rx_gain
+
+        return
 
 
     def get_conf_package(self):

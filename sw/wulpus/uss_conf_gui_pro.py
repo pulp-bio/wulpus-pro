@@ -146,8 +146,6 @@ class WulpusProUssConfigGUI(widgets.VBox, WulpusProUssConfig):
 
         # Disable capture restart, capture timeout and number of samples (per index is sloppy, but works for now)
         entries_acq[4].disabled = True      # num_samples
-        # entries_adv[7].disabled = True      # restart_capt
-        # entries_adv[8].disabled = True      # capt_timeout
 
         self.entries_left = entries_acq + entries_exc
         self.entries_right = entries_adv

@@ -36,6 +36,8 @@ LINE_N_SAMPLES = 400
 
 FILE_NAME_BASE = 'data_'
 
+GAIN_PLOT_LOW_Y_MARGIN_DB = 20
+
 box_layout = widgets.Layout(display='flex',
                 flex_flow='column',
                 align_items='center',
@@ -234,16 +236,40 @@ class WulpusGuiSingleCh(widgets.VBox):
                                            markersize=1,
                                            label='Envelope')
         
-        self.ax.legend(loc='upper right')
-        
+        # Create secondary y-axis
+        self.ax2 = self.ax.twinx()
+
+        # Calculate the gain curve
+        self.uss_conf.calc_gain_curve()
+
+        # Plot on secondary y-axis
+        self.gain_curve, = self.ax2.plot(self.uss_conf.gain_curve_db, 
+                                         color='black',
+                                         linestyle='dashed',
+                                         label='Gain curve',
+                                         zorder=-10)
+                
+        # Add legends from both axes
+        lines = [self.raw_data_line, self.filt_data_line, self.envelope_line, self.gain_curve]
+        labels = [line.get_label() for line in lines]
+
+        # Set axes labels and title
         self.ax.set_xlabel('Samples')
         self.ax.set_ylabel('ADC digital code')
+        self.ax2.set_ylabel('Gain [dB]')
         self.ax.set_title('A-mode data')
 
         self.filt_data_line.set_visible(self.filt_data_check.value)
         self.envelope_line.set_visible(self.env_data_check.value)
 
         self.ax.set_ylim(-3000, 3000)
+        self.ax2.set_ylim(0 + self.uss_conf.rx_gain - GAIN_PLOT_LOW_Y_MARGIN_DB, 80 + self.uss_conf.rx_gain)
+
+        # Add and elevate legend
+        legend = self.ax.legend(lines, labels, loc='lower right', ncol=4)
+        legend.get_frame().set_alpha(1.0)
+        legend.set_zorder(10)
+
         self.ax.grid(True)
 
     def setup_bmode_plot(self):
