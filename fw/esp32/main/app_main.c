@@ -39,8 +39,24 @@ typedef struct
 {
     int fd;
     struct sockaddr_in addr;
-    uint addr_len;
+    uint16_t addr_len;
 } socket_instance_t;
+
+typedef enum
+{
+    SET_CONFIG = 0x57,
+    GET_DATA = 0x58,
+    PING = 0x59,
+    RESET = 0x5A,
+} wulpus_command_e;
+
+typedef struct
+{
+    char magic[6]; // "wulpus"
+    wulpus_command_e command;
+    uint16_t data_length;
+    uint8_t *data;
+} wulpus_command_header_t;
 
 static const char *TAG = "main";
 
@@ -53,7 +69,8 @@ SemaphoreHandle_t data_ready_sem = NULL;
 
 uint8_t spi_rx_buffer[CONFIG_WP_DATA_RX_LENGTH];
 
-static void tcp_server_task(void *pvParameters);
+static void
+tcp_server_task(void *pvParameters);
 static void data_handler_task(void *pvParameters);
 static void data_ready_handler(void *arg);
 
@@ -166,7 +183,7 @@ void app_main(void)
 
 static void tcp_server_task(void *pvParameters)
 {
-    char rx_buffer[CONFIG_WP_SERVER_RX_BUFFER_SIZE];
+    uint8_t rx_buffer[CONFIG_WP_SERVER_RX_BUFFER_SIZE];
     char addr_str[128];
     int addr_family;
     int ip_protocol;
@@ -217,56 +234,77 @@ static void tcp_server_task(void *pvParameters)
         if (response_socket.fd < 0)
         {
             ESP_LOGE(TAG, "Unable to accept connection: %s", strerror(errno));
-            break;
+            continue;
         }
 
         bsp_update_led(STATUS_TRANSMITTING);
 
+        wulpus_command_header_t header;
+        header.data = rx_buffer;
+
         // Read data from the socket
-        int len = recv(response_socket.fd, rx_buffer, sizeof(rx_buffer) - 1, 0);
+        int len = recv(response_socket.fd, (uint8_t *)&header, sizeof(header), 0);
         // Error occurred during receiving
+        if (len < 0)
+        {
+            ESP_LOGE(TAG, "recv failed: %s", strerror(errno));
+            continue;
+        }
+        else if (len == 0)
+        {
+            ESP_LOGW(TAG, "No header received");
+            continue;
+        }
+        else if (len != sizeof(header))
+        {
+            ESP_LOGW(TAG, "Header length mismatch: expected %d, got %d", sizeof(header), len);
+            continue;
+        }
+
+        // Send back header as response
+        int err = send(response_socket.fd, (uint8_t *)&header, sizeof(header) - sizeof(uint8_t *), 0);
+        if (err < 0)
+        {
+            ESP_LOGE(TAG, "Error occurred during sending: %s", strerror(errno));
+            break;
+        }
+        ESP_LOGD(TAG, "Header echoed back");
+
+        // Check first 6 bytes: "wulpus"
+        if (strncmp(header.magic, "wulpus", 6) != 0)
+        {
+            ESP_LOGW(TAG, "Invalid magic: Expected 'wulpus'");
+            break;
+        }
+
+        ESP_LOGI(TAG, "Command: %d, Data length: %d", header.command, header.data_length);
+
+        // Receive data
+        len = recv(response_socket.fd, header.data, header.data_length, 0);
         if (len < 0)
         {
             ESP_LOGE(TAG, "recv failed: %s", strerror(errno));
             break;
         }
-        // Data received
-        else
+        else if (len == 0)
         {
-            rx_buffer[len] = 0; // Null-terminate whatever we received and treat like a string
-            ESP_LOGI(TAG, "Received %d bytes: '%s'", len, rx_buffer);
-
-            if (len == 0)
-            {
-                ESP_LOGI(TAG, "No data received");
-                break;
-            }
-
-            // TODO: Send response
-            // // Send response
-            // char *resp = "Hello, world!";
-            // int err = send(sock, resp, strlen(resp), 0);
-            // if (err < 0)
-            // {
-            //     ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
-            //     break;
-            // }
-            // ESP_LOGI(TAG, "Response sent");
+            ESP_LOGW(TAG, "No data received");
+            break;
+        }
+        else if (len != header.data_length)
+        {
+            ESP_LOGW(TAG, "Data length mismatch: expected %d, got %d", header.data_length, len);
+            break;
         }
 
-        // Check command
-        char *token = strtok(rx_buffer, " ");
-        if (strcmp(token, "config") == 0)
+        switch (header.command)
         {
-            // Rest of the command is a configuration package (bytes, not a string)
-            uint8_t *config = (uint8_t *)rx_buffer + strlen(token) + 1;
-            int config_len = len - strlen(token) - 1;
-            ESP_LOGI(TAG, "Received configuration package of length %d", config_len);
-
+        case SET_CONFIG:
+            ESP_LOGI(TAG, "Received set config command");
             // Send configuration via SPI to the device
             spi_transaction_t tx = {
-                .length = config_len * 8,
-                .tx_buffer = config,
+                .length = header.data_length * 8,
+                .tx_buffer = header.data,
                 .rx_buffer = NULL,
             };
             esp_err_t ret = spi_device_transmit(spi, &tx);
@@ -280,25 +318,31 @@ static void tcp_server_task(void *pvParameters)
                 ESP_LOGI(TAG, "Configuration package sent successfully");
                 bsp_update_led(STATUS_IDLE);
             }
-        }
-        else if (strcmp(token, "reset") == 0)
-        {
+            break;
+        case GET_DATA:
+            ESP_LOGW(TAG, "GET_DATA is not implemented");
+            bsp_update_led(STATUS_IDLE);
+            break;
+        case PING:
+            ESP_LOGI(TAG, "Received ping command");
+            // Send response
+            char *resp = "pong";
+            err = send(response_socket.fd, resp, strlen(resp), 0);
+            if (err < 0)
+            {
+                ESP_LOGE(TAG, "Error occurred during sending: %s", strerror(errno));
+                bsp_update_led(STATUS_ERROR);
+                break;
+            }
+            bsp_update_led(STATUS_IDLE);
+            break;
+        case RESET:
             ESP_LOGI(TAG, "Received reset command");
-
             // Reset self
             esp_restart();
-        }
-        else
-        {
-            ESP_LOGI(TAG, "Received unknown command '%s'", token);
-        }
-
-        err = close(response_socket.fd);
-        if (err != 0)
-        {
-            ESP_LOGE(TAG, "Unable to close socket: errno %s", strerror(errno));
             break;
         }
+        ESP_LOGI(TAG, "Command %d processed", header.command);
 
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
@@ -342,7 +386,6 @@ static void data_handler_task(void *pvParameters)
                     ESP_LOGE(TAG, "Failed to allocate memory for SPI transaction");
                     continue;
                 }
-
                 esp_err_t ret = spi_device_transmit(spi, &rx);
                 if (ret != ESP_OK)
                 {
@@ -350,14 +393,26 @@ static void data_handler_task(void *pvParameters)
                     continue;
                 }
 
-                // Send data to the socket
-                int err = send(response_socket.fd, rx.rx_buffer, rx.length, 0);
+                // Send header and data
+                wulpus_command_header_t response = {
+                    .magic = "wulpus",
+                    .command = GET_DATA,
+                    .data_length = rx.length,
+                    .data = rx.rx_buffer,
+                };
+                int err = send(response_socket.fd, (uint8_t *)&response, sizeof(response) - sizeof(uint8_t *), 0);
                 if (err < 0)
                 {
-                    ESP_LOGE(TAG, "Error occurred during sending: %s", strerror(errno));
+                    ESP_LOGE(TAG, "Error occurred during sending header: %s", strerror(errno));
                     continue;
                 }
-                ESP_LOGD(TAG, "Data sent to socket");
+                err = send(response_socket.fd, response.data, response.data_length, 0);
+                if (err < 0)
+                {
+                    ESP_LOGE(TAG, "Error occurred during sending data: %s", strerror(errno));
+                    continue;
+                }
+                ESP_LOGI(TAG, "Data sent successfully");
             }
 
             bsp_update_led(STATUS_IDLE);
