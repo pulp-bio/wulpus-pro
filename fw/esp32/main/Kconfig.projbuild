@@ -1,5 +1,7 @@
 menu "WULPUS PRO Configuration"
 
+    menu "Power Management"
+
     config WP_ENABLE_PM
         bool "Enable power management"
         default y
@@ -15,6 +17,10 @@ menu "WULPUS PRO Configuration"
             The default value is 10 MHz.
         depends on WP_ENABLE_PM
 
+    endmenu
+
+    menu "Double Reset"
+
     config WP_DOUBLE_RESET
         bool "Double reset detection"
         default y
@@ -29,6 +35,10 @@ menu "WULPUS PRO Configuration"
             This sets the timeout for double reset detection in milliseconds.
             The default value is 2000 milliseconds.
         depends on WP_DOUBLE_RESET
+
+    endmenu
+
+    menu "Networking"
 
     config WP_SOCKET_PORT
         int "Socket port"
@@ -61,5 +71,115 @@ menu "WULPUS PRO Configuration"
         help
             This sets the server RX buffer size in bytes.
             The default value is 128 bytes.
+
+    endmenu
+
+    menu "SPI"
+
+    config WP_SPI_INSTANCE
+        int "SPI instance (1 or 2)"
+        default 1
+        range 1 2
+        help
+            This sets the SPI instance to use.
+            The default value is 1.
+
+    config WP_SPI_MISO
+        int "SPI MISO pin"
+        default 12
+        range 0 39
+        help
+            This sets the SPI MISO pin.
+            The default value is 12.
+    
+    config WP_SPI_MOSI
+        int "SPI MOSI pin"
+        default 13
+        range 0 39
+        help
+            This sets the SPI MOSI pin.
+            The default value is 13.
+    
+    config WP_SPI_CLK
+        int "SPI CLK pin"
+        default 14
+        range 0 39
+        help
+            This sets the SPI CLK pin.
+            The default value is 14.
+
+    config WP_SPI_CS
+        int "SPI CS pin"
+        default 15
+        range 0 39
+        help
+            This sets the SPI CS pin.
+            The default value is 15.
+
+    config WP_SPI_MAX_TRANSFER_SIZE
+        int "SPI max transfer size [bytes]"
+        default 1024
+        range 32 8192
+        help
+            This sets the maximum transfer size for SPI in bytes.
+            The default value is 1024 bytes.
+
+    config WP_SPI_CLOCK_SPEED
+        int "SPI clock speed [Hz]"
+        default 8000000
+        range 100000 50000000
+        help
+            This sets the SPI clock speed in Hz.
+            The default value is 8 MHz.
+
+    endmenu
+
+    menu "GPIO"
+
+    config WP_GPIO_LINK_READY
+        int "Link ready GPIO pin"
+        default 2
+        range 0 39
+        help
+            This sets the link ready GPIO pin.
+            The default value is 2.
+
+    config WP_GPIO_DATA_READY
+        int "Data ready GPIO pin"
+        default 4
+        range 0 39
+        help
+            This sets the data ready GPIO pin.
+            The default value is 4.
+
+    endmenu
+
+    menu "Data Handling"
+
+    config WP_HANDLER_STACK_SIZE
+        int "Data handler stack size [bytes]"
+        default 2048
+        range 1024 16384
+        help
+            This sets the data handler stack size in bytes.
+            The default value is 2048 bytes.
+
+    config WP_HANDLER_PRIORITY
+        int "Data handler task priority"
+        default 6
+        range 1 10
+        help
+            This sets the data handler task priority.
+            The default value is 6.
+
+    config WP_DATA_RX_LENGTH
+        int "Data RX length [bytes]"
+        default 804
+        range 32 8192
+        help
+            This sets the data RX length in bytes.
+            The default value is 804 bytes.
+
+    endmenu
 
 endmenu
