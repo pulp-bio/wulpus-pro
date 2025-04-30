@@ -15,13 +15,20 @@ menu "WULPUS PRO Configuration"
             The default value is 10 MHz.
         depends on WP_ENABLE_PM
 
-    config WP_RESET_PROVISIONED
-        bool
-        default n
-        prompt "Reset provisioned status"
+    config WP_DOUBLE_RESET
+        bool "Double reset detection"
+        default y
         help
-            This erases the NVS to reset provisioned status of the device on every reboot.
-            Provisioned status is determined by the Wi-Fi STA configuration, saved on the NVS.
+            This erases the NVS to reset provisioned status of the device on double reset.
+
+    config WP_DOUBLE_RESET_TIMEOUT
+        int "Double reset timeout [ms]"
+        default 2000
+        range 1000 20000
+        help
+            This sets the timeout for double reset detection in milliseconds.
+            The default value is 2000 milliseconds.
+        depends on WP_DOUBLE_RESET
 
     config WP_SOCKET_PORT
         int "Socket port"
@@ -32,7 +39,7 @@ menu "WULPUS PRO Configuration"
             The default value is 2121.
 
     config WP_SERVER_STACK_SIZE
-        int "Server task stack size"
+        int "Server task stack size [bytes]"
         default 4096
         range 1024 16384
         help
@@ -48,7 +55,7 @@ menu "WULPUS PRO Configuration"
             The default value is 5.
 
     config WP_SERVER_RX_BUFFER_SIZE
-        int "Server RX buffer size"
+        int "Server RX buffer size [bytes]"
         default 128
         range 32 8192
         help

@@ -30,17 +30,36 @@
 #include "bsp.h"
 #include "provisioner.h"
 #include "mdns_manager.h"
+#include "double_reset.h"
 
-#include "index.h"
+#include "helpers.h"
+
+typedef struct
+{
+    int fd;
+    struct sockaddr_in addr;
+    uint addr_len;
+} socket_instance_t;
 
 static const char *TAG = "main";
 
+socket_instance_t response_socket;
+
 static void tcp_server_task(void *pvParameters);
-static void print_wifi_stats(void);
 
 void app_main(void)
 {
     ESP_ERROR_CHECK(bsp_init());
+
+#if CONFIG_WP_DOUBLE_RESET
+    // Check double reset
+    bool reset_provisioning = false;
+    ESP_ERROR_CHECK(double_reset_start(&reset_provisioning, CONFIG_WP_DOUBLE_RESET_TIMEOUT));
+    if (reset_provisioning)
+    {
+        ESP_LOGI(TAG, "Double reset detected! Provisioning will be reset.");
+    }
+#endif
 
 #if CONFIG_WP_ENABLE_PM
     // Configure power management (DFS and auto light sleep)
@@ -65,30 +84,10 @@ void app_main(void)
     bsp_update_led(STATUS_PROVISIONING);
 
     // Start provisioning
-#if CONFIG_WP_RESET_PROVISIONED
-    ESP_ERROR_CHECK(provisioner_start(true));
+#if CONFIG_WP_DOUBLE_RESET
+    ESP_ERROR_CHECK(provisioner_start(reset_provisioning));
 #else
-
-    // // Set up button on IO45 to reset provisioning
-    // gpio_config_t io_conf;
-    // io_conf.intr_type = GPIO_INTR_DISABLE;
-    // io_conf.mode = GPIO_MODE_INPUT;
-    // io_conf.pin_bit_mask = 1ULL << 45;
-    // io_conf.pull_down_en = 0;
-    // io_conf.pull_up_en = 0;
-    // gpio_config(&io_conf);
-
-    // vTaskDelay(100 / portTICK_PERIOD_MS);
-
-    // if (gpio_get_level(45) == 1)
-    // {
-    //     ESP_LOGW(TAG, "Resetting provisioning since button is pressed");
-    //     ESP_ERROR_CHECK(provisioner_start(true));
-    // }
-    // else
-    // {
     ESP_ERROR_CHECK(provisioner_start(false));
-    // }
 #endif
     ESP_ERROR_CHECK(provisioner_wait());
 
@@ -100,15 +99,6 @@ void app_main(void)
     // Start TCP server
     xTaskCreate(tcp_server_task, "tcp_server", CONFIG_WP_SERVER_STACK_SIZE, NULL, CONFIG_WP_SERVER_PRIORITY, NULL);
 }
-
-typedef struct
-{
-    int fd;
-    struct sockaddr_in addr;
-    uint addr_len;
-} socket_instance_t;
-
-socket_instance_t response_socket;
 
 static void tcp_server_task(void *pvParameters)
 {
@@ -222,129 +212,4 @@ static void tcp_server_task(void *pvParameters)
     }
 
     vTaskDelete(NULL);
-}
-
-static void print_wifi_stats(void)
-{
-    // get wifi protocol
-    uint8_t wifi_protocol = 0;
-    int status = esp_wifi_get_protocol(WIFI_IF_STA, &wifi_protocol);
-    if (status != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to get wifi protocol: %d", status);
-    }
-    else
-    {
-        char enabled_protocols[50] = "";
-        if (wifi_protocol & WIFI_PROTOCOL_11B)
-        {
-            strcat(enabled_protocols, "11b,");
-        }
-        if (wifi_protocol & WIFI_PROTOCOL_11G)
-        {
-            strcat(enabled_protocols, "11g,");
-        }
-        if (wifi_protocol & WIFI_PROTOCOL_11N)
-        {
-            strcat(enabled_protocols, "11n,");
-        }
-        if (wifi_protocol & WIFI_PROTOCOL_LR)
-        {
-            strcat(enabled_protocols, "LR,");
-        }
-        if (wifi_protocol & WIFI_PROTOCOL_11AX)
-        {
-            strcat(enabled_protocols, "11ax,");
-        }
-
-        int len = strlen(enabled_protocols);
-        if (len > 0)
-        {
-            enabled_protocols[len - 1] = '\0';
-            ESP_LOGI(TAG, "Enabled wifi protocols: %s", enabled_protocols);
-        }
-        else if (len == 0)
-        {
-            ESP_LOGW(TAG, "No wifi protocols enabled");
-        }
-    }
-
-    wifi_phy_mode_t mode;
-    status = esp_wifi_sta_get_negotiated_phymode(&mode);
-    switch (mode)
-    {
-    case WIFI_PHY_MODE_11B:
-        ESP_LOGI(TAG, "Negotiated wifi phy mode: 11B");
-        break;
-    case WIFI_PHY_MODE_11G:
-        ESP_LOGI(TAG, "Negotiated wifi phy mode: 11G");
-        break;
-    case WIFI_PHY_MODE_HE20:
-        ESP_LOGI(TAG, "Negotiated wifi phy mode: HE20");
-        break;
-    case WIFI_PHY_MODE_HT20:
-        ESP_LOGI(TAG, "Negotiated wifi phy mode: HT20");
-        break;
-    case WIFI_PHY_MODE_HT40:
-        ESP_LOGI(TAG, "Negotiated wifi phy mode: HT40");
-        break;
-    case WIFI_PHY_MODE_LR:
-        ESP_LOGI(TAG, "Negotiated wifi phy mode: LR");
-        break;
-    case WIFI_PHY_MODE_11A:
-        ESP_LOGI(TAG, "Negotiated wifi phy mode: 11A");
-        break;
-    case WIFI_PHY_MODE_VHT20:
-        ESP_LOGI(TAG, "Negotiated wifi phy mode: VHT20");
-        break;
-    }
-
-    uint8_t primary_channel;
-    wifi_second_chan_t second_channel;
-    status = esp_wifi_get_channel(&primary_channel, &second_channel);
-    if (status != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to get wifi channel: %d", status);
-    }
-    else
-    {
-        ESP_LOGI(TAG, "Negotiated wifi channel: %d", primary_channel);
-        switch (second_channel)
-        {
-        case WIFI_SECOND_CHAN_NONE:
-            ESP_LOGI(TAG, "The channel width is HT20");
-            break;
-        case WIFI_SECOND_CHAN_ABOVE:
-            ESP_LOGI(TAG, "The channel width is HT40 and the secondary channel is above the primary channel");
-            break;
-        case WIFI_SECOND_CHAN_BELOW:
-            ESP_LOGI(TAG, "The channel width is HT40 and the secondary channel is below the primary channel");
-            break;
-        default:
-            ESP_LOGW(TAG, "Unknown secondary channel");
-            break;
-        }
-    }
-
-    wifi_ps_type_t ps_type;
-    status = esp_wifi_get_ps(&ps_type);
-    if (status != ESP_OK)
-    {
-        ESP_LOGE(TAG, "Failed to get wifi power save type: %d", status);
-    }
-    else
-    {
-        if (ps_type == WIFI_PS_NONE)
-        {
-            ESP_LOGI(TAG, "Enabled wifi power save type: NONE");
-        }
-        else if (ps_type == WIFI_PS_MIN_MODEM)
-        {
-            ESP_LOGI(TAG, "Enabled wifi power save type: MIN MODEM");
-        }
-        else if (ps_type == WIFI_PS_MAX_MODEM)
-        {
-            ESP_LOGI(TAG, "Enabled wifi power save type: MAX MODEM");
-        }
-    }
 }
