@@ -1,38 +1,58 @@
-menu "Example Configuration"
+menu "WULPUS PRO Configuration"
 
-    config EXAMPLE_ENABLE_PM
+    config WP_ENABLE_PM
         bool "Enable power management"
         default y
         help
-            This enables power management for the example.
+            This enables power management.
+    
+    config WP_PM_MIN_FREQUENCY
+        int "Minimum frequency for DFS"
+        default 10
+        range 1 100
+        help
+            This sets the minimum frequency for DFS in MHz.
+            The default value is 10 MHz.
+        depends on WP_ENABLE_PM
 
-    config EXAMPLE_RESET_PROVISIONED
+    config WP_RESET_PROVISIONED
         bool
         default n
-        prompt "Reset provisioned status of the device"
+        prompt "Reset provisioned status"
         help
             This erases the NVS to reset provisioned status of the device on every reboot.
             Provisioned status is determined by the Wi-Fi STA configuration, saved on the NVS.
 
-    config EXAMPLE_RANDOM_DATA_SIZE
-        int "Size of random data to pre-generate"
-        default 65000
-        range 1 65000
+    config WP_SOCKET_PORT
+        int "Socket port"
+        default 2121
+        range 1 65535
         help
-            This is the size of random data to generate.
+            This sets the socket port for the server.
+            The default value is 2121.
 
-    config EXAMPLE_RETRY_UDP
-        bool "Retry sending failed UDP packets"
-        default y
+    config WP_SERVER_STACK_SIZE
+        int "Server task stack size"
+        default 4096
+        range 1024 16384
         help
-            This enables retrying sending failed UDP packets.
+            This sets the server task stack size in bytes.
+            The default value is 4096 bytes.
 
-    config EXAMPLE_UDP_RETRY_COUNT
-        int "Number of retries for sending UDP packets"
+    config WP_SERVER_PRIORITY
+        int "Server task priority"
         default 5
         range 1 10
-        depends on EXAMPLE_RETRY_UDP
         help
-            This is the number of retries for sending UDP packets.
+            This sets the server task priority.
+            The default value is 5.
+
+    config WP_SERVER_RX_BUFFER_SIZE
+        int "Server RX buffer size"
+        default 128
+        range 32 8192
+        help
+            This sets the server RX buffer size in bytes.
+            The default value is 128 bytes.
 
 endmenu
