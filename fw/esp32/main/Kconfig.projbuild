@@ -1,0 +1,38 @@
+menu "Example Configuration"
+
+    config EXAMPLE_ENABLE_PM
+        bool "Enable power management"
+        default y
+        help
+            This enables power management for the example.
+
+    config EXAMPLE_RESET_PROVISIONED
+        bool
+        default n
+        prompt "Reset provisioned status of the device"
+        help
+            This erases the NVS to reset provisioned status of the device on every reboot.
+            Provisioned status is determined by the Wi-Fi STA configuration, saved on the NVS.
+
+    config EXAMPLE_RANDOM_DATA_SIZE
+        int "Size of random data to pre-generate"
+        default 65000
+        range 1 65000
+        help
+            This is the size of random data to generate.
+
+    config EXAMPLE_RETRY_UDP
+        bool "Retry sending failed UDP packets"
+        default y
+        help
+            This enables retrying sending failed UDP packets.
+
+    config EXAMPLE_UDP_RETRY_COUNT
+        int "Number of retries for sending UDP packets"
+        default 5
+        range 1 10
+        depends on EXAMPLE_RETRY_UDP
+        help
+            This is the number of retries for sending UDP packets.
+
+endmenu

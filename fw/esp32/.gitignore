@@ -1,0 +1,6 @@
+.vscode/
+build/
+managed_components/
+partition_table/
+
+*.old
