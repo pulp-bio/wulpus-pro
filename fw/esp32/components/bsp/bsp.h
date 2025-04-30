@@ -21,6 +21,16 @@ const typedef enum bsp_color_t {
     BSP_COLOR_WHITE = BSP_COLOR_RED | BSP_COLOR_GREEN | BSP_COLOR_BLUE
 } bsp_color_t;
 
+// LED status for update function
+typedef enum
+{
+    STATUS_OFF,
+    STATUS_PROVISIONING,
+    STATUS_IDLE,
+    STATUS_TRANSMITTING,
+    STATUS_ERROR
+} status_t;
+
 /**
  * @brief Initialize the board support package
  *
@@ -29,5 +39,12 @@ const typedef enum bsp_color_t {
 esp_err_t bsp_init(void);
 
 esp_err_t bsp_led_set(bsp_color_t color, uint8_t brightness);
+
+/**
+ * @brief Update the LED according to status, including blinking for transmitting
+ *
+ * @param status LED status to display
+ */
+void bsp_update_led(status_t status);
 
 #endif // _BSP_H

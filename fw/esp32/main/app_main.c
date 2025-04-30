@@ -35,22 +35,8 @@
 
 static const char *TAG = "main";
 
-char *random_data;
-
-// LED mutex
-static SemaphoreHandle_t led_mutex;
-
-const typedef enum e_status {
-    STATUS_OFF,
-    STATUS_PROVISIONING,
-    STATUS_IDLE,
-    STATUS_TRANSMITTING,
-    STATUS_ERROR
-} status_t;
-
 static void tcp_server_task(void *pvParameters);
 static void print_wifi_stats(void);
-static void update_led(status_t status);
 
 void app_main(void)
 {
@@ -66,9 +52,8 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_pm_configure(&pm_config));
 #endif
 
-    // Initialize LED
-    led_mutex = xSemaphoreCreateMutex();
-    update_led(STATUS_OFF);
+    // Initialize LED moved to bsp component
+    bsp_update_led(STATUS_OFF);
 
     // Initialize provisioner and thus wifi
     ESP_ERROR_CHECK(provisioner_init());
@@ -77,7 +62,7 @@ void app_main(void)
     ESP_ERROR_CHECK(mdns_manager_init("wulpus"));
     ESP_ERROR_CHECK(mdns_manager_add("wulpus", MDNS_PROTO_TCP, CONFIG_WP_SOCKET_PORT));
 
-    update_led(STATUS_PROVISIONING);
+    bsp_update_led(STATUS_PROVISIONING);
 
     // Start provisioning
 #if CONFIG_WP_RESET_PROVISIONED
@@ -110,7 +95,7 @@ void app_main(void)
     // Print wifi stats
     print_wifi_stats();
 
-    update_led(STATUS_IDLE);
+    bsp_update_led(STATUS_IDLE);
 
     // Start TCP server
     xTaskCreate(tcp_server_task, "tcp_server", CONFIG_WP_SERVER_STACK_SIZE, NULL, CONFIG_WP_SERVER_PRIORITY, NULL);
@@ -213,7 +198,7 @@ static void tcp_server_task(void *pvParameters)
             // ESP_LOGI(TAG, "Response sent");
         }
 
-        // Check if command is to start sending random data
+        // Check command
         char *token = strtok(rx_buffer, " ");
         if (strcmp(token, "start") == 0)
         {
@@ -231,7 +216,7 @@ static void tcp_server_task(void *pvParameters)
             break;
         }
 
-        update_led(STATUS_IDLE);
+        bsp_update_led(STATUS_IDLE);
 
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
@@ -362,54 +347,4 @@ static void print_wifi_stats(void)
             ESP_LOGI(TAG, "Enabled wifi power save type: MAX MODEM");
         }
     }
-}
-
-void toggle_led_callback(void *arg)
-{
-    static bool led_state = false;
-    led_state = !led_state;
-    // take mutex
-    xSemaphoreTake(led_mutex, portMAX_DELAY);
-    ESP_ERROR_CHECK(bsp_led_set(led_state ? BSP_COLOR_GREEN : BSP_COLOR_CYAN, BSP_DEFAULT_BRIGHTNESS));
-    // give mutex
-    xSemaphoreGive(led_mutex);
-}
-
-void update_led(status_t status)
-{
-    static esp_timer_handle_t toggle_led_timer;
-    const esp_timer_create_args_t toggle_led_timer_args = {
-        .callback = &toggle_led_callback,
-        .name = "toggle_led_timer"};
-
-    xSemaphoreTake(led_mutex, portMAX_DELAY);
-    if (esp_timer_is_active(toggle_led_timer))
-    {
-        ESP_ERROR_CHECK(esp_timer_stop(toggle_led_timer));
-    }
-
-    switch (status)
-    {
-    case STATUS_OFF:
-        ESP_ERROR_CHECK(bsp_led_set(BSP_COLOR_BLACK, BSP_DEFAULT_BRIGHTNESS));
-        break;
-    case STATUS_PROVISIONING:
-        ESP_ERROR_CHECK(bsp_led_set(BSP_COLOR_YELLOW, BSP_DEFAULT_BRIGHTNESS));
-        break;
-    case STATUS_IDLE:
-        ESP_ERROR_CHECK(bsp_led_set(BSP_COLOR_GREEN, BSP_DEFAULT_BRIGHTNESS));
-        break;
-    case STATUS_TRANSMITTING:
-        // start blinking
-        ESP_ERROR_CHECK(esp_timer_create(&toggle_led_timer_args, &toggle_led_timer));
-        ESP_ERROR_CHECK(esp_timer_start_periodic(toggle_led_timer, 500000));
-        break;
-    case STATUS_ERROR:
-        ESP_ERROR_CHECK(bsp_led_set(BSP_COLOR_RED, BSP_DEFAULT_BRIGHTNESS));
-        break;
-    default:
-        ESP_LOGW(TAG, "Unknown status");
-        break;
-    }
-    xSemaphoreGive(led_mutex);
 }

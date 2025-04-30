@@ -3,10 +3,78 @@
 #include <nvs_flash.h>
 
 #include "led_strip.h"
+#include <freertos/semphr.h>
+#include <esp_timer.h>
+
+#define BSP_LED_TOGGLE_PERIOD_US (500000)
 
 led_strip_handle_t led = NULL;
+static status_t led_status = STATUS_OFF;
+static esp_timer_handle_t led_timer;
+static SemaphoreHandle_t led_mutex;
+static bool led_on = false;
 
 esp_err_t led_init(void);
+
+// Toggle callback for blinking
+static void toggle_led_callback(void *arg)
+{
+    if (xSemaphoreTake(led_mutex, pdMS_TO_TICKS(10)))
+    {
+        led_on = !led_on;
+        bsp_led_set(BSP_COLOR_WHITE, led_on ? BSP_DEFAULT_BRIGHTNESS : 0);
+        xSemaphoreGive(led_mutex);
+    }
+}
+
+void bsp_update_led(status_t status)
+{
+    // Stop existing timer
+    if (led_timer)
+    {
+        esp_timer_stop(led_timer);
+    }
+    // Create mutex and timer on first use
+    if (led_mutex == NULL)
+    {
+        led_mutex = xSemaphoreCreateMutex();
+    }
+    if (led_timer == NULL)
+    {
+        const esp_timer_create_args_t timer_args = {
+            .callback = &toggle_led_callback,
+            .arg = NULL,
+            .name = "led_timer"};
+        esp_timer_create(&timer_args, &led_timer);
+    }
+    led_status = status;
+    uint8_t brightness = BSP_DEFAULT_BRIGHTNESS;
+    // Handle statuses
+    switch (status)
+    {
+    case STATUS_OFF:
+        bsp_led_set(BSP_COLOR_BLACK, 0);
+        break;
+    case STATUS_PROVISIONING:
+        bsp_led_set(BSP_COLOR_BLUE, brightness);
+        break;
+    case STATUS_IDLE:
+        bsp_led_set(BSP_COLOR_GREEN, brightness);
+        break;
+    case STATUS_TRANSMITTING:
+        led_on = true;
+        bsp_led_set(BSP_COLOR_YELLOW, brightness);
+        esp_timer_start_periodic(led_timer, BSP_LED_TOGGLE_PERIOD_US);
+        break;
+    case STATUS_ERROR:
+        led_on = true;
+        bsp_led_set(BSP_COLOR_RED, brightness);
+        esp_timer_start_periodic(led_timer, BSP_LED_TOGGLE_PERIOD_US * 2);
+        break;
+    default:
+        break;
+    }
+}
 
 esp_err_t bsp_init(void)
 {
