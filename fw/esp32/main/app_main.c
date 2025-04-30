@@ -47,32 +47,48 @@ typedef enum
     SET_CONFIG = 0x57,
     GET_DATA = 0x58,
     PING = 0x59,
-    RESET = 0x5A,
+    PONG = 0x5A,
+    RESET = 0x5B,
+    CLOSE = 0x5C,
 } wulpus_command_e;
+
+typedef struct __attribute__((packed))
+{
+    char magic[6];             // Magic string "wulpus"
+    uint8_t command : 8;       // Command type
+    uint16_t data_length : 16; // Length of data
+} wulpus_command_header_t;
+#define HEADER_LEN sizeof(wulpus_command_header_t)
 
 typedef struct
 {
-    char magic[6]; // "wulpus"
-    wulpus_command_e command;
-    uint16_t data_length;
-    uint8_t *data;
-} wulpus_command_header_t;
+    uint8_t *data;        // Pointer to data buffer
+    uint16_t data_length; // Length of data
+} wulpus_command_data_t;
 
 static const char *TAG = "main";
 
-socket_instance_t response_socket;
-spi_device_handle_t spi;
+socket_instance_t response_socket = {
+    .fd = -1,
+    .addr = {0},
+    .addr_len = 0,
+};
+spi_device_handle_t spi = NULL;
 
 TaskHandle_t tcp_server_task_handle = NULL;
 TaskHandle_t data_handler_task_handle = NULL;
-SemaphoreHandle_t data_ready_sem = NULL;
+static QueueHandle_t gpio_evt_queue = NULL;
 
-uint8_t spi_rx_buffer[CONFIG_WP_DATA_RX_LENGTH];
+uint8_t spi_rx_buffer[CONFIG_WP_DATA_RX_LENGTH + HEADER_LEN];
 
-static void
-tcp_server_task(void *pvParameters);
+static void tcp_server_task(void *pvParameters);
 static void data_handler_task(void *pvParameters);
-static void data_ready_handler(void *arg);
+
+static void IRAM_ATTR data_ready_handler(void *arg)
+{
+    uint32_t gpio_num = (uint32_t)arg;
+    xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
+}
 
 void app_main(void)
 {
@@ -121,12 +137,29 @@ void app_main(void)
 
     gpio_cfg.intr_type = GPIO_INTR_POSEDGE;
     gpio_cfg.mode = GPIO_MODE_INPUT;
+    gpio_cfg.pull_down_en = GPIO_PULLDOWN_ENABLE; // TODO: Remove in final device
     gpio_cfg.pin_bit_mask = (1ULL << CONFIG_WP_GPIO_DATA_READY);
     ESP_ERROR_CHECK(gpio_config(&gpio_cfg));
 
+    // Create semaphore
+    gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
+    if (gpio_evt_queue == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to create semaphore");
+        return;
+    }
+
+    // Create data handler
+    xTaskCreate(data_handler_task, "data_handler", CONFIG_WP_HANDLER_STACK_SIZE, NULL, CONFIG_WP_HANDLER_PRIORITY, &data_handler_task_handle);
+    if (data_handler_task_handle == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to create data handler task");
+        return;
+    }
+
     // Initialize interrupt
-    gpio_install_isr_service(0);
-    gpio_isr_handler_add(CONFIG_WP_GPIO_DATA_READY, data_ready_handler, NULL);
+    ESP_ERROR_CHECK(gpio_install_isr_service(0));
+    ESP_ERROR_CHECK(gpio_isr_handler_add(CONFIG_WP_GPIO_DATA_READY, data_ready_handler, (void *)CONFIG_WP_GPIO_DATA_READY));
 
     // Initialize SPI
     spi_bus_config_t spi_cfg = {
@@ -141,6 +174,7 @@ void app_main(void)
         .clock_speed_hz = CONFIG_WP_SPI_CLOCK_SPEED,
         .mode = 0,
         .spics_io_num = CONFIG_WP_SPI_CS,
+        .queue_size = 3,
     };
     ESP_ERROR_CHECK(spi_bus_initialize(CONFIG_WP_SPI_INSTANCE - 1, &spi_cfg, SPI_DMA_CH_AUTO));
     ESP_ERROR_CHECK(spi_bus_add_device(CONFIG_WP_SPI_INSTANCE - 1, &dev_cfg, &spi));
@@ -169,14 +203,6 @@ void app_main(void)
     if (tcp_server_task_handle == NULL)
     {
         ESP_LOGE(TAG, "Failed to create server task");
-        return;
-    }
-
-    // Start data handler
-    xTaskCreate(data_handler_task, "data_handler", CONFIG_WP_HANDLER_STACK_SIZE, NULL, CONFIG_WP_HANDLER_PRIORITY, &data_handler_task_handle);
-    if (data_handler_task_handle == NULL)
-    {
-        ESP_LOGE(TAG, "Failed to create data handler task");
         return;
     }
 }
@@ -237,112 +263,159 @@ static void tcp_server_task(void *pvParameters)
             continue;
         }
 
-        bsp_update_led(STATUS_TRANSMITTING);
+        ESP_LOGI(TAG, "Socket accepted from %s:%d", inet_ntoa(response_socket.addr.sin_addr), ntohs(response_socket.addr.sin_port));
 
-        wulpus_command_header_t header;
-        header.data = rx_buffer;
+        bool run = true;
+        while (run)
+        {
+            bsp_update_led(STATUS_TRANSMITTING);
 
-        // Read data from the socket
-        int len = recv(response_socket.fd, (uint8_t *)&header, sizeof(header), 0);
-        // Error occurred during receiving
-        if (len < 0)
-        {
-            ESP_LOGE(TAG, "recv failed: %s", strerror(errno));
-            continue;
-        }
-        else if (len == 0)
-        {
-            ESP_LOGW(TAG, "No header received");
-            continue;
-        }
-        else if (len != sizeof(header))
-        {
-            ESP_LOGW(TAG, "Header length mismatch: expected %d, got %d", sizeof(header), len);
-            continue;
-        }
+            wulpus_command_header_t recv_header, resp_header;
 
-        // Send back header as response
-        int err = send(response_socket.fd, (uint8_t *)&header, sizeof(header) - sizeof(uint8_t *), 0);
-        if (err < 0)
-        {
-            ESP_LOGE(TAG, "Error occurred during sending: %s", strerror(errno));
-            break;
-        }
-        ESP_LOGD(TAG, "Header echoed back");
-
-        // Check first 6 bytes: "wulpus"
-        if (strncmp(header.magic, "wulpus", 6) != 0)
-        {
-            ESP_LOGW(TAG, "Invalid magic: Expected 'wulpus'");
-            break;
-        }
-
-        ESP_LOGI(TAG, "Command: %d, Data length: %d", header.command, header.data_length);
-
-        // Receive data
-        len = recv(response_socket.fd, header.data, header.data_length, 0);
-        if (len < 0)
-        {
-            ESP_LOGE(TAG, "recv failed: %s", strerror(errno));
-            break;
-        }
-        else if (len == 0)
-        {
-            ESP_LOGW(TAG, "No data received");
-            break;
-        }
-        else if (len != header.data_length)
-        {
-            ESP_LOGW(TAG, "Data length mismatch: expected %d, got %d", header.data_length, len);
-            break;
-        }
-
-        switch (header.command)
-        {
-        case SET_CONFIG:
-            ESP_LOGI(TAG, "Received set config command");
-            // Send configuration via SPI to the device
-            spi_transaction_t tx = {
-                .length = header.data_length * 8,
-                .tx_buffer = header.data,
-                .rx_buffer = NULL,
-            };
-            esp_err_t ret = spi_device_transmit(spi, &tx);
-            if (ret != ESP_OK)
+            // Read data from the socket
+            int len = recv(response_socket.fd, (uint8_t *)&recv_header, HEADER_LEN, 0);
+            // Error occurred during receiving
+            if (len < 0)
             {
-                ESP_LOGE(TAG, "Error occurred during SPI transmission: %s", esp_err_to_name(ret));
-                bsp_update_led(STATUS_ERROR);
+                ESP_LOGE(TAG, "recv failed: %s", strerror(errno));
+                continue;
             }
-            else
+            else if (len == 0)
             {
-                ESP_LOGI(TAG, "Configuration package sent successfully");
-                bsp_update_led(STATUS_IDLE);
+                ESP_LOGW(TAG, "No header received");
+                continue;
             }
-            break;
-        case GET_DATA:
-            ESP_LOGW(TAG, "GET_DATA is not implemented");
-            bsp_update_led(STATUS_IDLE);
-            break;
-        case PING:
-            ESP_LOGI(TAG, "Received ping command");
-            // Send response
-            char *resp = "pong";
-            err = send(response_socket.fd, resp, strlen(resp), 0);
+            else if (len != HEADER_LEN)
+            {
+                ESP_LOGW(TAG, "Header length mismatch: expected %d, got %d", HEADER_LEN, len);
+                continue;
+            }
+
+            // Check first 6 bytes: "wulpus"
+            if (strncmp(recv_header.magic, "wulpus", 6) != 0)
+            {
+                ESP_LOGW(TAG, "Invalid magic: Expected 'wulpus'");
+                break;
+            }
+
+            // Send back header as response
+            resp_header = recv_header;
+            resp_header.data_length = 0; // Set data length to 0 for the header response
+
+            int err = send(response_socket.fd, (uint8_t *)&resp_header, HEADER_LEN, 0);
             if (err < 0)
             {
                 ESP_LOGE(TAG, "Error occurred during sending: %s", strerror(errno));
-                bsp_update_led(STATUS_ERROR);
                 break;
             }
-            bsp_update_led(STATUS_IDLE);
-            break;
-        case RESET:
-            ESP_LOGI(TAG, "Received reset command");
-            // Reset self
-            esp_restart();
-            break;
+            ESP_LOGD(TAG, "Header echoed back");
+
+            ESP_LOGI(TAG, "Command: %d, Data length: %d", recv_header.command, recv_header.data_length);
+
+            wulpus_command_data_t command_data = {
+                .data = rx_buffer,
+                .data_length = recv_header.data_length,
+            };
+
+            if (recv_header.data_length != 0)
+            {
+                if (recv_header.data_length > CONFIG_WP_SERVER_RX_BUFFER_SIZE)
+                {
+                    ESP_LOGE(TAG, "Data length exceeds buffer size: %d > %d", recv_header.data_length, CONFIG_WP_SERVER_RX_BUFFER_SIZE);
+                    break;
+                }
+
+                // Receive data
+                len = recv(response_socket.fd, command_data.data, command_data.data_length, 0);
+                if (len < 0)
+                {
+                    ESP_LOGE(TAG, "recv failed: %s", strerror(errno));
+                    break;
+                }
+                else if (len == 0)
+                {
+                    ESP_LOGW(TAG, "No data received");
+                    break;
+                }
+                else if (len != recv_header.data_length)
+                {
+                    ESP_LOGW(TAG, "Data length mismatch: expected %d, got %d", recv_header.data_length, len);
+                    break;
+                }
+            }
+
+            switch (recv_header.command)
+            {
+            case SET_CONFIG:
+                ESP_LOGI(TAG, "Received set config command");
+                // Send configuration via SPI to the device
+                spi_transaction_t tx = {
+                    .length = recv_header.data_length * 8,
+                    .tx_buffer = command_data.data,
+                    .rx_buffer = NULL,
+                    .flags = 0,
+                };
+                esp_err_t ret = spi_device_transmit(spi, &tx);
+                if (ret != ESP_OK)
+                {
+                    ESP_LOGE(TAG, "Error occurred during SPI transmission: %s", esp_err_to_name(ret));
+                    bsp_update_led(STATUS_ERROR);
+                }
+                else
+                {
+                    ESP_LOGI(TAG, "Configuration package sent successfully");
+                    bsp_update_led(STATUS_IDLE);
+                }
+                break;
+            case GET_DATA:
+                ESP_LOGW(TAG, "GET_DATA is not implemented");
+                bsp_update_led(STATUS_IDLE);
+                break;
+            case PING:
+                ESP_LOGI(TAG, "Received ping command");
+                // Send response
+                wulpus_command_header_t response = {
+                    .magic = "wulpus",
+                    .command = PONG,
+                    .data_length = 4,
+                };
+                int err = send(response_socket.fd, (uint8_t *)&response, HEADER_LEN, 0);
+                if (err < 0)
+                {
+                    ESP_LOGE(TAG, "Error occurred during sending header: %s", strerror(errno));
+                    bsp_update_led(STATUS_ERROR);
+                    break;
+                }
+                err = send(response_socket.fd, (uint8_t *)"pong", 4, 0);
+                if (err < 0)
+                {
+                    ESP_LOGE(TAG, "Error occurred during sending data: %s", strerror(errno));
+                    bsp_update_led(STATUS_ERROR);
+                    break;
+                }
+                bsp_update_led(STATUS_IDLE);
+                break;
+            case RESET:
+                ESP_LOGI(TAG, "Received reset command");
+                // Reset self
+                esp_restart();
+                break;
+            case CLOSE:
+                ESP_LOGI(TAG, "Received close command");
+                // Exit loop
+                run = false;
+                break;
+            }
+            ESP_LOGI(TAG, "Command %d processed", recv_header.command);
         }
-        ESP_LOGI(TAG, "Command %d processed", header.command);
+
+        // Close socket
+        if (response_socket.fd >= 0)
+        {
+            close(response_socket.fd);
+            response_socket.fd = -1;
+        }
+        ESP_LOGI(TAG, "Socket closed");
 
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
@@ -352,22 +425,29 @@ static void tcp_server_task(void *pvParameters)
 
 static void data_handler_task(void *pvParameters)
 {
-    // Create semaphore
-    data_ready_sem = xSemaphoreCreateBinary();
-    if (data_ready_sem == NULL)
-    {
-        ESP_LOGE(TAG, "Failed to create semaphore");
-        vTaskDelete(NULL);
-        return;
-    }
+    ESP_LOGD(TAG, "Data handler task started");
+
+    uint32_t io_num;
+
+    spi_transaction_t rx = {
+        .length = CONFIG_WP_DATA_RX_LENGTH * 8,
+        .tx_buffer = NULL,
+        .rx_buffer = spi_rx_buffer + HEADER_LEN,
+    };
+    wulpus_command_header_t response = {
+        .magic = "wulpus",
+        .command = GET_DATA,
+        .data_length = CONFIG_WP_DATA_RX_LENGTH,
+    };
+    memcpy(spi_rx_buffer, &response, HEADER_LEN);
 
     while (1)
     {
         // Wait for data ready signal
-        if (xSemaphoreTake(data_ready_sem, portMAX_DELAY) == pdTRUE)
+        if (xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY) == pdTRUE)
         {
             // Data is ready, handle it here
-            ESP_LOGI(TAG, "Data ready signal received");
+            // ESP_LOGD(TAG, "Data ready signal received on GPIO %lu", io_num);
             bsp_update_led(STATUS_TRANSMITTING);
 
             // If socket is open, send data
@@ -375,12 +455,10 @@ static void data_handler_task(void *pvParameters)
             // Data: <data>
             if (response_socket.fd >= 0)
             {
+                // Get current time
+                uint32_t current_time = esp_timer_get_time();
+
                 // Read data from the device
-                spi_transaction_t rx = {
-                    .length = CONFIG_WP_DATA_RX_LENGTH * 8,
-                    .tx_buffer = NULL,
-                    .rx_buffer = spi_rx_buffer,
-                };
                 esp_err_t ret = spi_device_transmit(spi, &rx);
                 if (ret != ESP_OK)
                 {
@@ -389,38 +467,30 @@ static void data_handler_task(void *pvParameters)
                     continue;
                 }
 
+                uint32_t elapsed_time = esp_timer_get_time() - current_time;
+                ESP_LOGI(TAG, "SPI reception took %lu us", elapsed_time);
+
+                current_time = esp_timer_get_time();
+
+                // int flag = 1;
+                // setsockopt(response_socket.fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
+
                 // Send header and data
-                wulpus_command_header_t response = {
-                    .magic = "wulpus",
-                    .command = GET_DATA,
-                    .data_length = rx.length,
-                    .data = rx.rx_buffer,
-                };
-                int err = send(response_socket.fd, (uint8_t *)&response, sizeof(response) - sizeof(uint8_t *), 0);
+                int err = send(response_socket.fd, spi_rx_buffer, CONFIG_WP_DATA_RX_LENGTH + HEADER_LEN, 0);
                 if (err < 0)
                 {
-                    ESP_LOGE(TAG, "Error occurred during sending header: %s", strerror(errno));
+                    ESP_LOGE(TAG, "Error occurred during data: %s", strerror(errno));
                     bsp_update_led(STATUS_ERROR);
                     continue;
                 }
-                err = send(response_socket.fd, response.data, response.data_length, 0);
-                if (err < 0)
-                {
-                    ESP_LOGE(TAG, "Error occurred during sending data: %s", strerror(errno));
-                    bsp_update_led(STATUS_ERROR);
-                    continue;
-                }
-                ESP_LOGI(TAG, "Data sent successfully");
+
+                // ESP_LOGI(TAG, "Sent successfully");
+
+                elapsed_time = esp_timer_get_time() - current_time;
+                ESP_LOGI(TAG, "Data sending took  %lu us", elapsed_time);
             }
 
             bsp_update_led(STATUS_IDLE);
         }
-
-        vTaskDelete(NULL);
     }
-}
-
-static void IRAM_ATTR data_ready_handler(void *arg)
-{
-    xSemaphoreGiveFromISR(data_ready_sem, NULL);
 }
