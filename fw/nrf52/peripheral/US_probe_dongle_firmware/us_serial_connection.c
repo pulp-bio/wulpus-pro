@@ -85,7 +85,7 @@ static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
 
 // Maximum size of the MSP config in bytes
 // According to the Config description
-#define READ_SIZE               68
+#define READ_SIZE               72
 
 
 static char m_rx_buffer[READ_SIZE];
