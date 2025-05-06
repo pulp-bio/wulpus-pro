@@ -1,11 +1,9 @@
-<img src="docs/images/wulpus_main.png" alt="WULPUS PRO" width="100%"/>
-
 # WULPUS PRO v0.1.0
-## Wearable Ultra Low-Power Ultrasound PRO
+## A base platform for Wearable Ultra Low Power Ultrasound
 
 # Introduction
 
-This repository contains the work in progress on the WULPUS PRO ultrasound platform.
+This repository contains the work in progress on the WULPUS PRO ultrasound platform, a successor of the [WULPUS Project](https://github.com/pulp-bio/wulpus)
 
 WULPUS PRO is a compact base platform for an ultra low power ultrasound sensing, featuring the following specifications:
 - **16 channels** (time-multiplexed)
