@@ -26,4 +26,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 - Removed `Capture restart time` and `Capture timeout time` from the old GUI.
-- 
