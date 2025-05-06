@@ -1,3 +1,8 @@
+# /// script
+# dependencies = [
+#   "zeroconf",
+# ]
+# ///
 import sys
 import socket
 import json

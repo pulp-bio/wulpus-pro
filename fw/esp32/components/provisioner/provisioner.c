@@ -3,13 +3,15 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/event_groups.h>
 
-#include <esp_log.h>
 #include <esp_wifi.h>
 #include <esp_wifi_he.h>
 #include <esp_event.h>
 
 #include <wifi_provisioning/manager.h>
 #include <wifi_provisioning/scheme_softap.h>
+
+#define LOG_LOCAL_LEVEL ESP_LOG_INFO
+#include <esp_log.h>
 
 #define TAG "provisioner"
 
@@ -141,38 +143,6 @@ static void provisioner_event_handler(void *arg, esp_event_base_t event_base, in
         esp_wifi_sta_get_ap_info(&ap_info);
         ESP_LOGI(TAG, "Connected to SSID %s", (const char *)ap_info.ssid);
 
-        wifi_phy_mode_t mode;
-        ESP_ERROR_CHECK(esp_wifi_sta_get_negotiated_phymode(&mode));
-        if (mode == WIFI_PHY_MODE_HE20)
-        {
-            ESP_LOGI(TAG, "Wi-Fi PHY mode is HE20, TWT may be supported");
-            // Set up TWT
-            wifi_twt_setup_config_t config = {
-                .setup_cmd = TWT_REQUEST,
-                .flow_id = 0,
-                .twt_id = 0,
-                .flow_type = 0,
-                .min_wake_dura = 255,
-                .wake_duration_unit = 0,
-                .wake_invl_expn = 10,
-                .wake_invl_mant = 512,
-                .trigger = 1,
-                .timeout_time_ms = 5000};
-            esp_err_t status = esp_wifi_sta_itwt_setup(&config);
-            if (status != ESP_OK)
-            {
-                ESP_LOGE(TAG, "Failed to set up TWT: %d", status);
-            }
-            else
-            {
-                ESP_LOGI(TAG, "TWT setup successful");
-            }
-        }
-        else
-        {
-            ESP_LOGW(TAG, "Wi-Fi PHY mode is not HE20, TWT isn't supported");
-        }
-
         // Set Wi-Fi power save mode to max modem
         ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_MAX_MODEM));
 
@@ -241,12 +211,17 @@ static void itwt_event_handler(void *arg, esp_event_base_t event_base, int32_t e
             wifi_event_sta_itwt_setup_t *setup = (wifi_event_sta_itwt_setup_t *)event_data;
             if (setup->status == ITWT_SETUP_SUCCESS)
             {
-                /* TWT Wake Interval = TWT Wake Interval Mantissa * (2 ^ TWT Wake Interval Exponent) */
-                ESP_LOGI(TAG, "<WIFI_EVENT_ITWT_SETUP>twt_id:%d, flow_id:%d, %s, %s, wake_dura:%d, wake_dura_unit:%d, wake_invl_e:%d, wake_invl_m:%d", setup->config.twt_id,
-                         setup->config.flow_id, setup->config.trigger ? "trigger-enabled" : "non-trigger-enabled", setup->config.flow_type ? "unannounced" : "announced",
-                         setup->config.min_wake_dura, setup->config.wake_duration_unit, setup->config.wake_invl_expn, setup->config.wake_invl_mant);
-                ESP_LOGI(TAG, "<WIFI_EVENT_ITWT_SETUP>target wake time:%lld, wake duration:%d us, service period:%d us", setup->target_wake_time, setup->config.min_wake_dura << (setup->config.wake_duration_unit == 1 ? 10 : 8),
-                         setup->config.wake_invl_mant << setup->config.wake_invl_expn);
+                // /* TWT Wake Interval = TWT Wake Interval Mantissa * (2 ^ TWT Wake Interval Exponent) */
+                // ESP_LOGI(TAG, "<WIFI_EVENT_ITWT_SETUP>twt_id:%d, flow_id:%d, %s, %s, wake_dura:%d, wake_dura_unit:%d, wake_invl_e:%d, wake_invl_m:%d", setup->config.twt_id,
+                //          setup->config.flow_id, setup->config.trigger ? "trigger-enabled" : "non-trigger-enabled", setup->config.flow_type ? "unannounced" : "announced",
+                //          setup->config.min_wake_dura, setup->config.wake_duration_unit, setup->config.wake_invl_expn, setup->config.wake_invl_mant);
+                // ESP_LOGI(TAG, "<WIFI_EVENT_ITWT_SETUP>target wake time:%lld, wake duration:%d us, service period:%d us", setup->target_wake_time, setup->config.min_wake_dura << (setup->config.wake_duration_unit == 1 ? 10 : 8),
+                //          setup->config.wake_invl_mant << setup->config.wake_invl_expn);
+                ESP_LOGI(TAG, "TWT Duration: %d us", setup->config.min_wake_dura << (setup->config.wake_duration_unit == 1 ? 10 : 8));
+                ESP_LOGI(TAG, "TWT Interval: %d us", setup->config.wake_invl_mant << setup->config.wake_invl_expn);
+
+                // Suspend TWT on startup
+                provisioner_twt_suspend(0);
             }
             else
             {
@@ -274,8 +249,8 @@ static void itwt_event_handler(void *arg, esp_event_base_t event_base, int32_t e
         {
             // TWT teardown event
 
-            wifi_event_sta_itwt_teardown_t *teardown = (wifi_event_sta_itwt_teardown_t *)event_data;
-            ESP_LOGI(TAG, "<WIFI_EVENT_ITWT_TEARDOWN>flow_id %d%s", teardown->flow_id, (teardown->flow_id == 8) ? "(all twt)" : "");
+            // wifi_event_sta_itwt_teardown_t *teardown = (wifi_event_sta_itwt_teardown_t *)event_data;
+            // ESP_LOGI(TAG, "<WIFI_EVENT_ITWT_TEARDOWN>flow_id %d%s", teardown->flow_id, (teardown->flow_id == 8) ? "(all twt)" : "");
 
             break;
         }
@@ -283,11 +258,11 @@ static void itwt_event_handler(void *arg, esp_event_base_t event_base, int32_t e
         {
             // TWT suspend event
 
-            wifi_event_sta_itwt_suspend_t *suspend = (wifi_event_sta_itwt_suspend_t *)event_data;
-            ESP_LOGI(TAG, "<WIFI_EVENT_ITWT_SUSPEND>status:%d, flow_id_bitmap:0x%x, actual_suspend_time_ms:[%lu %lu %lu %lu %lu %lu %lu %lu]",
-                     suspend->status, suspend->flow_id_bitmap,
-                     suspend->actual_suspend_time_ms[0], suspend->actual_suspend_time_ms[1], suspend->actual_suspend_time_ms[2], suspend->actual_suspend_time_ms[3],
-                     suspend->actual_suspend_time_ms[4], suspend->actual_suspend_time_ms[5], suspend->actual_suspend_time_ms[6], suspend->actual_suspend_time_ms[7]);
+            // wifi_event_sta_itwt_suspend_t *suspend = (wifi_event_sta_itwt_suspend_t *)event_data;
+            // ESP_LOGI(TAG, "<WIFI_EVENT_ITWT_SUSPEND>status:%d, flow_id_bitmap:0x%x, actual_suspend_time_ms:[%lu %lu %lu %lu %lu %lu %lu %lu]",
+            //          suspend->status, suspend->flow_id_bitmap,
+            //          suspend->actual_suspend_time_ms[0], suspend->actual_suspend_time_ms[1], suspend->actual_suspend_time_ms[2], suspend->actual_suspend_time_ms[3],
+            //          suspend->actual_suspend_time_ms[4], suspend->actual_suspend_time_ms[5], suspend->actual_suspend_time_ms[6], suspend->actual_suspend_time_ms[7]);
 
             break;
         }
@@ -295,8 +270,8 @@ static void itwt_event_handler(void *arg, esp_event_base_t event_base, int32_t e
         {
             // TWT probe event
 
-            wifi_event_sta_itwt_probe_t *probe = (wifi_event_sta_itwt_probe_t *)event_data;
-            ESP_LOGI(TAG, "<WIFI_EVENT_ITWT_PROBE>status:%s, reason:0x%x", itwt_probe_status_to_str(probe->status), probe->reason);
+            // wifi_event_sta_itwt_probe_t *probe = (wifi_event_sta_itwt_probe_t *)event_data;
+            // ESP_LOGI(TAG, "<WIFI_EVENT_ITWT_PROBE>status:%s, reason:0x%x", itwt_probe_status_to_str(probe->status), probe->reason);
 
             break;
         }
@@ -315,6 +290,8 @@ static void itwt_event_handler(void *arg, esp_event_base_t event_base, int32_t e
 esp_err_t provisioner_init(void)
 {
     esp_err_t status = ESP_OK;
+
+    esp_log_level_set(TAG, ESP_LOG_INFO);
 
     provisioner_event_group = xEventGroupCreate();
 
@@ -572,6 +549,76 @@ esp_err_t provisioner_wait(void)
     // Wait for provisioning to finish
     xEventGroupWaitBits(provisioner_event_group, PROVISIONER_DONE_EVENT, false, true, portMAX_DELAY);
     xEventGroupWaitBits(provisioner_event_group, PROVISIONER_CONNECTED_EVENT, false, true, portMAX_DELAY);
+
+    return ESP_OK;
+}
+
+esp_err_t provisioner_twt_setup(void)
+{
+#if CONFIG_PROVISIONER_TWT_ENABLED
+    wifi_phy_mode_t mode;
+    ESP_ERROR_CHECK(esp_wifi_sta_get_negotiated_phymode(&mode));
+    if (mode == WIFI_PHY_MODE_HE20)
+    {
+        ESP_LOGI(TAG, "Wi-Fi PHY mode is HE20, TWT may be supported");
+        // Set up TWT
+        wifi_twt_setup_config_t config = {
+            .setup_cmd = TWT_REQUEST,
+            .flow_id = 0,
+            .twt_id = 0,
+            .flow_type = 0,
+            .min_wake_dura = 10,
+            .wake_duration_unit = 1,
+            .wake_invl_expn = 5,
+            .wake_invl_mant = 62500,
+            .trigger = 1,
+            .timeout_time_ms = 5000};
+        esp_err_t status = esp_wifi_sta_itwt_setup(&config);
+        if (status != ESP_OK)
+        {
+            ESP_LOGE(TAG, "Failed to set up TWT: %d", status);
+            return status;
+        }
+        else
+        {
+            ESP_LOGI(TAG, "TWT setup successful");
+        }
+    }
+    else
+    {
+        ESP_LOGW(TAG, "Wi-Fi PHY mode is not HE20, TWT isn't supported");
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+#endif
+
+    return ESP_OK;
+}
+
+esp_err_t provisioner_twt_suspend(int time)
+{
+#if CONFIG_PROVISIONER_TWT_ENABLED
+    esp_err_t status = ESP_OK;
+    status = esp_wifi_sta_itwt_suspend(FLOW_ID_ALL, time);
+    if (status != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to suspend TWT: %s", esp_err_to_name(status));
+        return status;
+    }
+    ESP_LOGI(TAG, "TWT suspend successful");
+
+    // Check if is suspended
+    int flow_id_bitmap = 0;
+    status = esp_wifi_sta_itwt_get_flow_id_status(&flow_id_bitmap);
+    if (status != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to get TWT flow ID status: %s", esp_err_to_name(status));
+        return status;
+    }
+    else
+    {
+        ESP_LOGI(TAG, "TWT flow ID status: 0x%02X", flow_id_bitmap);
+    }
+#endif
 
     return ESP_OK;
 }

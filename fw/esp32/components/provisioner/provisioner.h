@@ -13,4 +13,7 @@ esp_err_t provisioner_stop(void);
 
 esp_err_t provisioner_wait(void);
 
+esp_err_t provisioner_twt_setup(void);
+esp_err_t provisioner_twt_suspend(int time);
+
 #endif

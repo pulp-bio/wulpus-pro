@@ -19,4 +19,10 @@ menu "provisioner Configuration"
         help
           Proof of possession password which will be used in the provisioning process.
 
+    config PROVISIONER_TWT_ENABLED
+        bool "Enable TWT"
+        default n
+        help
+          Enable Target Wake Time.
+
 endmenu

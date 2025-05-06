@@ -13,8 +13,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-#include <esp_log.h>
-#include <esp_wifi.h>
+// #include <esp_wifi.h>
 #include <esp_event.h>
 #include <esp_pm.h>
 #include <esp_system.h>
@@ -23,48 +22,22 @@
 #include <driver/gpio.h>
 #include <driver/spi_master.h>
 
-#include "lwip/err.h"
-#include "lwip/sockets.h"
-#include "lwip/sys.h"
-#include <lwip/netdb.h>
+// #include "lwip/err.h"
+// #include "lwip/sockets.h"
+// #include "lwip/sys.h"
+// #include <lwip/netdb.h>
 
 #include "bsp.h"
 #include "provisioner.h"
 #include "mdns_manager.h"
 #include "double_reset.h"
+#include "commander.h"
+#include "sock.h"
 
 #include "helpers.h"
 
-typedef struct
-{
-    int fd;
-    struct sockaddr_in addr;
-    uint16_t addr_len;
-} socket_instance_t;
-
-typedef enum
-{
-    SET_CONFIG = 0x57,
-    GET_DATA = 0x58,
-    PING = 0x59,
-    PONG = 0x5A,
-    RESET = 0x5B,
-    CLOSE = 0x5C,
-} wulpus_command_e;
-
-typedef struct __attribute__((packed))
-{
-    char magic[6];             // Magic string "wulpus"
-    uint8_t command : 8;       // Command type
-    uint16_t data_length : 16; // Length of data
-} wulpus_command_header_t;
-#define HEADER_LEN sizeof(wulpus_command_header_t)
-
-typedef struct
-{
-    uint8_t *data;        // Pointer to data buffer
-    uint16_t data_length; // Length of data
-} wulpus_command_data_t;
+#define LOG_LOCAL_LEVEL ESP_LOG_INFO
+#include <esp_log.h>
 
 static const char *TAG = "main";
 
@@ -113,6 +86,8 @@ void app_main(void)
     };
     ESP_ERROR_CHECK(esp_pm_configure(&pm_config));
 #endif
+
+    esp_log_level_set(TAG, ESP_LOG_INFO);
 
     // Initialize LED moved to bsp component
     bsp_update_led(STATUS_OFF);
@@ -192,6 +167,9 @@ void app_main(void)
     // Print wifi stats
     print_wifi_stats();
 
+    // Start but suspend TWT
+    provisioner_twt_setup();
+
     // Set link ready signal
     // FIXME: This could be made tidier in the connection callback, but it's the same in the nRF52 firmware
     ESP_ERROR_CHECK(gpio_set_level(CONFIG_WP_GPIO_LINK_READY, 1));
@@ -205,10 +183,14 @@ void app_main(void)
         ESP_LOGE(TAG, "Failed to create server task");
         return;
     }
+
+    ESP_LOGI(TAG, "Returning from app_main()");
 }
 
 static void tcp_server_task(void *pvParameters)
 {
+    ESP_LOGI(TAG, "TCP server task started");
+
     uint8_t rx_buffer[CONFIG_WP_SERVER_RX_BUFFER_SIZE];
     char addr_str[128];
     int addr_family;
@@ -264,6 +246,8 @@ static void tcp_server_task(void *pvParameters)
         }
 
         ESP_LOGI(TAG, "Socket accepted from %s:%d", inet_ntoa(response_socket.addr.sin_addr), ntohs(response_socket.addr.sin_port));
+
+        provisioner_twt_suspend(1);
 
         bool run = true;
         while (run)
@@ -417,6 +401,8 @@ static void tcp_server_task(void *pvParameters)
         }
         ESP_LOGI(TAG, "Socket closed");
 
+        provisioner_twt_suspend(0);
+
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 
@@ -425,7 +411,7 @@ static void tcp_server_task(void *pvParameters)
 
 static void data_handler_task(void *pvParameters)
 {
-    ESP_LOGD(TAG, "Data handler task started");
+    ESP_LOGI(TAG, "Data handler task started");
 
     uint32_t io_num;
 

@@ -2,13 +2,17 @@
 
 #include <string.h>
 
-#include <esp_log.h>
 #include <esp_wifi.h>
+
+#define LOG_LOCAL_LEVEL ESP_LOG_INFO
+#include <esp_log.h>
 
 static const char *TAG = "helpers";
 
 void print_wifi_stats(void)
 {
+    esp_log_level_set(TAG, ESP_LOG_INFO);
+
     // get wifi protocol
     uint8_t wifi_protocol = 0;
     int status = esp_wifi_get_protocol(WIFI_IF_STA, &wifi_protocol);

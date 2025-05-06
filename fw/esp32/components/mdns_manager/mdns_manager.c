@@ -2,10 +2,12 @@
 
 #include <string.h>
 
-#include <esp_log.h>
 #include <esp_wifi.h>
 
 #include "mdns.h"
+
+#define LOG_LOCAL_LEVEL ESP_LOG_INFO
+#include <esp_log.h>
 
 #define TAG "mdns_manager"
 
@@ -52,6 +54,8 @@ esp_err_t mdns_manager_init(char *hostname)
     }
 
     esp_err_t status = ESP_OK;
+
+    esp_log_level_set(TAG, ESP_LOG_INFO);
 
     // Initialize mDNS
     status = mdns_init();
