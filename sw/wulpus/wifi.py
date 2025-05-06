@@ -18,7 +18,7 @@ wifi_logger.propagate = False
 file_handler = logging.FileHandler("wulpus.log")
 file_handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter(
-    "%(asctime)s %(levelname)s\t%(message)s", "%Y-%m-%d %H:%M:%S"
+    "%(asctime)s\t%(name)s\t%(levelname)s\t%(message)s", "%Y-%m-%d %H:%M:%S"
 )
 file_handler.setFormatter(formatter)
 wifi_logger.addHandler(file_handler)
