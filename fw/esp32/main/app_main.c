@@ -51,6 +51,9 @@ spi_device_handle_t spi = NULL;
 TaskHandle_t tcp_server_task_handle = NULL;
 TaskHandle_t data_handler_task_handle = NULL;
 static QueueHandle_t gpio_evt_queue = NULL;
+SemaphoreHandle_t data_ready_semaphore = NULL;
+bool do_transmits = false;
+bool link_ready_set = false;
 
 uint8_t spi_rx_buffer[CONFIG_WP_DATA_RX_LENGTH + HEADER_LEN];
 
@@ -109,16 +112,24 @@ void app_main(void)
     };
     ESP_ERROR_CHECK(gpio_config(&gpio_cfg));
     ESP_ERROR_CHECK(gpio_set_level(CONFIG_WP_GPIO_LINK_READY, 0));
+    ESP_ERROR_CHECK(gpio_hold_en(CONFIG_WP_GPIO_LINK_READY));
 
     gpio_cfg.intr_type = GPIO_INTR_POSEDGE;
     gpio_cfg.mode = GPIO_MODE_INPUT;
-    gpio_cfg.pull_down_en = GPIO_PULLDOWN_ENABLE; // TODO: Remove in final device
+    // gpio_cfg.pull_down_en = GPIO_PULLDOWN_ENABLE;
     gpio_cfg.pin_bit_mask = (1ULL << CONFIG_WP_GPIO_DATA_READY);
     ESP_ERROR_CHECK(gpio_config(&gpio_cfg));
 
     // Create semaphore
     gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
     if (gpio_evt_queue == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to create semaphore");
+        return;
+    }
+
+    data_ready_semaphore = xSemaphoreCreateBinary();
+    if (data_ready_semaphore == NULL)
     {
         ESP_LOGE(TAG, "Failed to create semaphore");
         return;
@@ -146,13 +157,17 @@ void app_main(void)
         .max_transfer_sz = CONFIG_WP_SPI_MAX_TRANSFER_SIZE,
     };
     spi_device_interface_config_t dev_cfg = {
-        .clock_speed_hz = CONFIG_WP_SPI_CLOCK_SPEED,
+        // .clock_speed_hz = CONFIG_WP_SPI_CLOCK_SPEED, // TODO: Change back when good frequency is found
+        .clock_speed_hz = 2e6,
         .mode = 0,
         .spics_io_num = CONFIG_WP_SPI_CS,
         .queue_size = 3,
+        .cs_ena_pretrans = 16,
+        .cs_ena_posttrans = 16,
     };
     ESP_ERROR_CHECK(spi_bus_initialize(CONFIG_WP_SPI_INSTANCE - 1, &spi_cfg, SPI_DMA_CH_AUTO));
     ESP_ERROR_CHECK(spi_bus_add_device(CONFIG_WP_SPI_INSTANCE - 1, &dev_cfg, &spi));
+    ESP_ERROR_CHECK(gpio_hold_en(CONFIG_WP_SPI_CS));
 
     bsp_update_led(STATUS_PROVISIONING);
 
@@ -169,10 +184,6 @@ void app_main(void)
 
     // Start but suspend TWT
     provisioner_twt_setup();
-
-    // Set link ready signal
-    // FIXME: This could be made tidier in the connection callback, but it's the same in the nRF52 firmware
-    ESP_ERROR_CHECK(gpio_set_level(CONFIG_WP_GPIO_LINK_READY, 1));
 
     bsp_update_led(STATUS_IDLE);
 
@@ -332,13 +343,46 @@ static void tcp_server_task(void *pvParameters)
             {
             case SET_CONFIG:
                 ESP_LOGI(TAG, "Received set config command");
+
+                // Disable transmits
+                do_transmits = false;
+
+                // Set link ready signal
+                if (!link_ready_set)
+                {
+                    // Clear data ready signal
+                    xSemaphoreTake(data_ready_semaphore, 0);
+
+                    // FIXME: This could be made tidier in the connection callback, but it's the same in the nRF52 firmware
+                    ESP_ERROR_CHECK(gpio_hold_dis(CONFIG_WP_GPIO_LINK_READY));
+                    ESP_ERROR_CHECK(gpio_set_level(CONFIG_WP_GPIO_LINK_READY, 1));
+                    ESP_ERROR_CHECK(gpio_hold_en(CONFIG_WP_GPIO_LINK_READY));
+                    ESP_LOGI(TAG, "Link ready signal set");
+                    // link_ready_set = true;
+
+                    // Wait for data ready signal
+                    if (xSemaphoreTake(data_ready_semaphore, pdMS_TO_TICKS(1000)) == pdTRUE)
+                    {
+                        ESP_LOGI(TAG, "Data ready signal received");
+                    }
+                    else
+                    {
+                        ESP_LOGE(TAG, "Failed to take data ready semaphore");
+                        break;
+                    }
+                }
+
+                uint8_t spi_tx_buffer[804] = {0};
+                memcpy(spi_tx_buffer, command_data.data, recv_header.data_length);
+
                 // Send configuration via SPI to the device
                 spi_transaction_t tx = {
-                    .length = recv_header.data_length * 8,
-                    .tx_buffer = command_data.data,
+                    .length = 804 * 8,
+                    .tx_buffer = spi_tx_buffer,
                     .rx_buffer = NULL,
                     .flags = 0,
                 };
+                gpio_hold_dis(CONFIG_WP_SPI_CS);
                 esp_err_t ret = spi_device_transmit(spi, &tx);
                 if (ret != ESP_OK)
                 {
@@ -350,6 +394,17 @@ static void tcp_server_task(void *pvParameters)
                     ESP_LOGI(TAG, "Configuration package sent successfully");
                     bsp_update_led(STATUS_IDLE);
                 }
+                gpio_hold_en(CONFIG_WP_SPI_CS);
+
+                // // TODO: Check if this is correct/needed
+                // ESP_ERROR_CHECK(gpio_hold_dis(CONFIG_WP_GPIO_LINK_READY));
+                // ESP_ERROR_CHECK(gpio_set_level(CONFIG_WP_GPIO_LINK_READY, 0));
+                // ESP_ERROR_CHECK(gpio_hold_en(CONFIG_WP_GPIO_LINK_READY));
+                // ESP_LOGI(TAG, "Link ready signal reset");
+
+                // Enable transmits
+                do_transmits = true;
+
                 break;
             case GET_DATA:
                 ESP_LOGW(TAG, "GET_DATA is not implemented");
@@ -433,18 +488,24 @@ static void data_handler_task(void *pvParameters)
         if (xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY) == pdTRUE)
         {
             // Data is ready, handle it here
-            // ESP_LOGD(TAG, "Data ready signal received on GPIO %lu", io_num);
+            ESP_LOGI(TAG, "Data ready signal received on GPIO %lu", io_num);
             bsp_update_led(STATUS_TRANSMITTING);
+
+            if (!do_transmits)
+            {
+                xSemaphoreGive(data_ready_semaphore);
+            }
 
             // If socket is open, send data
             // Header: "data <length>"
             // Data: <data>
-            if (response_socket.fd >= 0)
+            if ((response_socket.fd >= 0) && do_transmits)
             {
                 // Get current time
                 uint32_t current_time = esp_timer_get_time();
 
                 // Read data from the device
+                gpio_hold_dis(CONFIG_WP_SPI_CS);
                 esp_err_t ret = spi_device_transmit(spi, &rx);
                 if (ret != ESP_OK)
                 {
@@ -452,6 +513,7 @@ static void data_handler_task(void *pvParameters)
                     bsp_update_led(STATUS_ERROR);
                     continue;
                 }
+                gpio_hold_en(CONFIG_WP_SPI_CS);
 
                 uint32_t elapsed_time = esp_timer_get_time() - current_time;
                 ESP_LOGI(TAG, "SPI reception took %lu us", elapsed_time);

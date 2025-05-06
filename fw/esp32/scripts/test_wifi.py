@@ -5,9 +5,9 @@
 # ///
 import time
 
-from wulpus import WulpusESP, WulpusCommand
+from wulpus import WulpusWiFi, WulpusCommand
 
-esp = WulpusESP()
+esp = WulpusWiFi()
 
 print(esp.get_available())
 
