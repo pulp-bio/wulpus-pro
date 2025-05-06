@@ -1,0 +1,29 @@
+Altium Designer Pick and Place Locations
+C:\Users\serge\Documents\repos\wulpus-pro\hw\wulpus_polycmut_adapter\fabrication_outputs\Pick Place\Pick Place for PCB1.txt
+
+========================================================================================================================
+File Design Information:
+
+Date:       06/05/25
+Time:       13:26
+Revision:   237e40e46f372f9dd24e04e77c5cebb91c8dcf3f
+Variant:    No variations
+Units used: mil
+
+Designator Comment       Layer       Footprint              Center-X(mil) Center-Y(mil) Rotation Description                                                                 
+R8         0             TopLayer    RESC1005X40X25NL05T10  -118.110      344.488       180      ""                                                                          
+R7         0             TopLayer    RESC1005X40X25NL05T10  -118.110      -344.488      180      ""                                                                          
+R6         0             TopLayer    RESC1005X40X25NL05T10  -39.370       344.488       180      ""                                                                          
+R5         0             TopLayer    RESC1005X40X25NL05T10  -39.370       -344.488      180      ""                                                                          
+R4         0             TopLayer    RESC1005X40X25NL05T10  39.370        344.488       180      ""                                                                          
+R3         0             TopLayer    RESC1005X40X25NL05T10  39.370        -344.488      180      ""                                                                          
+R2         0             TopLayer    RESC1005X40X25NL05T10  118.110       344.488       180      ""                                                                          
+R1         0             TopLayer    RESC1005X40X25NL05T10  118.110       -344.488      180      ""                                                                          
+P1         polycmut      TopLayer    Interposer             0.000         0.000         180      ""                                                                          
+TP4        TPAD6R        TopLayer    TP06R                  -177.165      -570.866      90       "0.6mm round"                                                               
+TP3        TPAD6R        TopLayer    TP06R                  177.165       -570.866      90       "0.6mm round"                                                               
+TP2        TPAD6R        TopLayer    TP06R                  -177.165      570.866       90       "0.6mm round"                                                               
+TP1        TPAD6R        TopLayer    TP06R                  177.165       570.866       90       "0.6mm round"                                                               
+J5         901-144-8RFX  TopLayer    AMPH-901-144-8RFX_V    539.370       0.000         0        "Coaxial Connector, 18 GHz, 50 Ohm, -65 to 165 degC, 5-Pin THD, RoHS, Bulk" 
+J4         91910-21169LF BottomLayer AMPHENOL_91910-21169LF 0.000         590.551       0        ""                                                                          
+J3         91910-21169LF BottomLayer AMPHENOL_91910-21169LF 0.000         -590.551      180      ""                                                                          

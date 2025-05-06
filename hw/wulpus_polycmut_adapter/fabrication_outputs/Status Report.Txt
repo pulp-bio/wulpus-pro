@@ -1,0 +1,10 @@
+Output: Bill of Materials
+Type  : BOM
+From  : Variant [pzt_hia_no_bias] of Project [wulpus_testbench_polycmut_flexypin.PrjPcb]
+   Generated File[Bill of Materials-ActiveBOM.xlsx]
+
+
+Files Generated   : 1
+Documents Printed : 0
+
+Finished Output Generation At 13:26:53 On 06/05/2025
