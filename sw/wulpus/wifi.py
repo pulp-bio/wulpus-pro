@@ -1,11 +1,27 @@
 import socket
 import struct
+import logging
 from enum import IntEnum
 
-import ipywidgets as widgets
 import numpy as np
 
-from .scanner import WulpusScanner, WulpusNetworkDevice
+from .scanner import WulpusScanner
+
+
+# Grab the logger you use in this file (e.g. “WiFi” in your __init__)
+wifi_logger = logging.getLogger("WiFi")
+wifi_logger.setLevel(logging.DEBUG)
+# Prevent messages from bubbling up to the root logger
+wifi_logger.propagate = False
+
+# Create and attach a FileHandler just for this logger
+file_handler = logging.FileHandler("wulpus.log")
+file_handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter(
+    "%(asctime)s %(levelname)s\t%(message)s", "%Y-%m-%d %H:%M:%S"
+)
+file_handler.setFormatter(formatter)
+wifi_logger.addHandler(file_handler)
 
 
 class WulpusCommand(IntEnum):
@@ -19,9 +35,6 @@ class WulpusCommand(IntEnum):
     PONG = 0x5A
     RESET = 0x5B
     CLOSE = 0x5C
-
-
-out = widgets.Output()
 
 
 class WulpusWiFi:
@@ -53,50 +66,61 @@ class WulpusWiFi:
 
         self.acq_length = 400
 
+        self.log = wifi_logger
+        self.log.critical("-" * 40)
+        self.log.info("WulpusWiFi initialized")
+
     def get_available(self):
         """
         Get a list of available devices.
         """
+        self.log.info("Getting available devices")
 
-        return self.scanner.find()
+        result = self.scanner.find()
+
+        self.log.info(f"Found {len(result)} devices")
+        for device in result:
+            self.log.debug(f"Found device: {device}")
+
+        self.log.debug("Done getting available devices")
+
+        return result
 
     def open(self, device: str = None):
         """
         Open the device connection.
         """
-        if self.sock is not None:
-            return
+        self.log.info("Opening device connection")
 
-        log_file = open("wulpus.log", "a")
-        log_file.write("Opening device...\n")
+        if self.sock is not None:
+            self.log.warning("Device already open")
+            return True
 
         self.device = None
         if device is None:
-            log_file.write("No device specified, scanning...\n")
+            self.log.info("No device specified, using scanner")
             if self.scanner.devices:
-                log_file.write("Found device, opening...\n")
+                self.log.debug("Found device, opening...")
                 self.device = self.scanner.devices[0]
-                log_file.write(f"Opening {self.device}\n")
             else:
-                log_file.write("No device found.\n")
+                self.log.error("No devices scanned")
                 return False
         else:
-            log_file.write(f"Opening {device}\n")
             self.device = device
 
         # Open socket
+        self.log.info(f"Opening {self.device}")
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        log_file.write(f"Connecting using {self.sock}\n")
         self.sock.settimeout(5)
-        log_file.write("Set timeout\n")
-        log_file.write(f"Connecting to {self.device}\n")
+
         try:
             self.sock.connect((device.ip, device.port))
         except Exception as e:
-            log_file.write(f"Error connecting to {device}: {e}\n")
+            self.log.error(f"Error connecting to {device}: {e}")
             self.sock = None
             return False
-        log_file.write("Connected\n")
+
+        self.log.info("Opened device connection")
 
         return True
 
@@ -104,7 +128,10 @@ class WulpusWiFi:
         """
         Flush the device connection.
         """
+        self.log.debug("Flushing device connection")
+
         if self.sock is None:
+            self.log.warning("Device not open")
             return
 
         curr_timeout = self.sock.gettimeout()
@@ -114,29 +141,43 @@ class WulpusWiFi:
             try:
                 self.sock.recv(1024)
             except socket.timeout:
+                self.log.debug("No more data to receive")
                 break
 
         self.sock.settimeout(curr_timeout)
 
         self.backlog = b""
 
+        self.log.debug("Flushed device connection")
+
     def close(self):
         """
         Close the device connection.
         """
+        self.log.info("Closing device connection")
+
         if self.sock is None:
-            return
+            self.log.warning("Device not open")
+            return True
 
         # Flush the device connection
         self.flush()
 
         # Send close command
-        self.send_command(WulpusCommand.CLOSE)
+        try:
+            self.send_command(WulpusCommand.CLOSE, receive=False)
+        except Exception as e:
+            self.log.error(f"Error sending close command: {e}")
+            return False
 
         # Close socket
+        self.log.debug("Closing socket")
         self.sock.close()
         self.sock = None
         self.device = None
+
+        self.log.info("Closed device connection")
+        return True
 
     def _encode_command(self, commmand: WulpusCommand, data: bytes = None):
         """
@@ -163,6 +204,9 @@ class WulpusWiFi:
         # 1 byte: command (WulpusCommand)
         # 2 bytes: length (u16)
         if len(header_bytes) != 9:
+            self.log.error(
+                f"Invalid header length. Expected 9 bytes, got {len(header_bytes)}"
+            )
             raise ValueError(
                 f"Invalid header length. Expected 9 bytes, got {len(header_bytes)}"
             )
@@ -175,9 +219,13 @@ class WulpusWiFi:
             "command": WulpusCommand(header[1]),
             "length": header[2],
         }
+        self.log.debug(f"Decoded header: {header}")
 
         # Check magic
         if header["magic"] != "wulpus":
+            self.log.error(
+                f"Invalid header magic. Expected 'wulpus', got {header['magic']}"
+            )
             raise ValueError("Invalid header magic. Expected 'wulpus'.")
 
         return header
@@ -188,17 +236,22 @@ class WulpusWiFi:
         """
         Send a command to the device.
         """
+        self.log.info(f"Sending command: {command}")
+
         if self.sock is None:
+            self.log.error("Device not open")
             raise ValueError("Device not open.")
 
         # Encode command
         package = self._encode_command(command, data)
 
         # Send package
+        self.log.debug(f"Sending package: {package}")
         self.sock.sendall(package)
 
         # Check if we need to receive a response
         if not receive:
+            self.log.debug("Not receiving response")
             return None, None
 
         # Receive response
@@ -206,6 +259,9 @@ class WulpusWiFi:
 
         # Check command
         if header["command"] != command:
+            self.log.error(
+                f"Invalid command. Expected {command}, got {header['command']}"
+            )
             raise ValueError(
                 f"Invalid command. Expected {command}, got {header['command']}"
             )
@@ -216,27 +272,40 @@ class WulpusWiFi:
         """
         Send a configuration package to the device.
         """
+        self.log.info(f"Sending configuration package of length {len(conf_bytes_pack)}")
         self.send_command(WulpusCommand.SET_CONFIG, conf_bytes_pack)
+        self.log.info("Sent configuration package")
 
     def receive_command(self, strict_length: bool = True):
         """
         Receive a command from the device.
         """
+        self.log.info("Receiving command")
+
         if self.sock is None:
+            self.log.error("Device not open")
             raise ValueError("Device not open.")
 
         # Receive header
+        self.log.debug("Receiving header")
         header = self.sock.recv(9)
         header = self._decode_command(header)
+        self.log.debug(f"Received header: {header}")
 
         # Get data of length header["length"]
+        self.log.debug(f"Receiving data of length {header['length']}")
         data = self.sock.recv(header["length"])
         if len(data) != header["length"] and strict_length:
+            self.log.error(
+                f"Invalid received data length. Expected {header['length']}, got {len(data)}"
+            )
             raise ValueError(
                 f"Invalid received data length. Expected {header['length']}, got {len(data)}"
             )
+        self.log.debug(f"Received data of length {len(data)}")
 
         # Return header and data
+        self.log.debug("Done receiving command")
         return header, data
 
     def _get_rf_data_and_info__(self, bytes_arr: bytes):
@@ -253,8 +322,14 @@ class WulpusWiFi:
             "acq_nr": data[1],
             "rf_arr": np.frombuffer(bytes_arr[3:-1], dtype="<i2"),
         }
+        self.log.debug(
+            f"Decoded RF data: TRX ID: {data['tx_rx_id']}, ACQ NR: {data['acq_nr']}, DATA: {len(data['rf_arr'])}",
+        )
 
         if len(data["rf_arr"]) != self.acq_length:
+            self.log.error(
+                f"Invalid data length. Expected {self.acq_length}, got {len(data['rf_arr'])}"
+            )
             raise ValueError(
                 f"Invalid data length. Expected {self.acq_length}, got {len(data['rf_arr'])}"
             )
@@ -265,19 +340,24 @@ class WulpusWiFi:
         """
         Receive a data package from the device.
         """
+        self.log.info("Receiving data package")
+
         if len(self.backlog) > 0:
-            print("Backlog has data")
+            self.log.debug("Backlog has data")
             # Check if there is a complete package in the backlog
             header = self._decode_command(self.backlog[:9])
+            self.log.debug(f"Backlog header: {header}")
             if len(self.backlog) >= header["length"] + 9:
-                print("Backlog has complete package")
+                self.log.debug("Backlog has complete package")
                 # Get data of length header["length"]
                 data = self.backlog[9 : header["length"] + 9]
                 self.backlog = self.backlog[header["length"] + 9 :]
 
                 return self._get_rf_data_and_info__(data)
             else:
-                print("Backlog does not have complete package")
+                self.log.warning(
+                    "Backlog does not have complete package, discarding it"
+                )
                 # No complete package in backlog, receive new data
                 self.backlog = b""
 
@@ -287,11 +367,16 @@ class WulpusWiFi:
             return [], None, None
 
         if len(data) != header["length"]:
-            # print("Data length mismatch, receiving more data")
+            self.log.warning(
+                f"Pushing incomplete data to backlog. Expected {header['length']}, got {len(data)}"
+            )
             data += self.sock.recv(header["length"] - len(data))
 
         # Check command
         if header["command"] != WulpusCommand.GET_DATA:
+            self.log.error(
+                f"Invalid command. Expected {WulpusCommand.GET_DATA}, got {header['command']}"
+            )
             raise ValueError(
                 f"Invalid command. Expected {WulpusCommand.GET_DATA}, got {header['command']}"
             )
@@ -303,18 +388,27 @@ class WulpusWiFi:
             data = data.split(b"wulpus")[0]
 
         # Unpack data
+        self.log.debug("Decoding data")
         return self._get_rf_data_and_info__(data)
 
     def ping(self):
         """
         Ping the device.
         """
+        self.log.info("Pinging device")
+
         header, data = self.send_command(WulpusCommand.PING)
 
         # Check command
         if header["command"] != WulpusCommand.PING:
+            self.log.error(
+                f"Invalid command. Expected {WulpusCommand.PING}, got {header['command']}"
+            )
             raise ValueError(
                 f"Invalid command. Expected {WulpusCommand.PING}, got {header['command']}"
             )
 
+        self.log.info(f"Ping response: {data}")
+
+        self.log.debug("Done pinging device")
         return header, data
