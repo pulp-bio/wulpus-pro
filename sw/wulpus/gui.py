@@ -23,6 +23,7 @@ import numpy as np
 import time
 from threading import Thread
 import os.path
+import logging
 
 from wulpus.dongle import WulpusDongle
 
@@ -40,13 +41,31 @@ box_layout = widgets.Layout(
     display="flex", flex_flow="column", align_items="center", width="50%"
 )
 
+# Grab the logger you use in this file (e.g. “WiFi” in your __init__)
+gui_logger = logging.getLogger("GUI")
+gui_logger.setLevel(logging.DEBUG)
+# Prevent messages from bubbling up to the root logger
+gui_logger.propagate = False
+
+# Create and attach a FileHandler just for this logger
+file_handler = logging.FileHandler("wulpus.log")
+file_handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter(
+    "%(asctime)s %(levelname)s\t%(message)s", "%Y-%m-%d %H:%M:%S"
+)
+file_handler.setFormatter(formatter)
+gui_logger.addHandler(file_handler)
+
 
 class WulpusGuiSingleCh(widgets.VBox):
     def __init__(self, com_link: WulpusDongle, uss_conf, max_vis_fps=20):
         super().__init__()
 
+        self.log = gui_logger
+
         # Communication link
         self.com_link = com_link
+        self.log.debug(f"Communication link: {self.com_link}")
 
         # Ultrasound Subsystem Configurator
         self.uss_conf = uss_conf
@@ -224,6 +243,8 @@ class WulpusGuiSingleCh(widgets.VBox):
         # add to children
         self.children = [main_box]
 
+        self.log.debug("WulpusGUISingleCh initialized")
+
     def one_time_fig_config(self):
         with self.output:
             self.fig, self.ax = plt.subplots(
@@ -295,10 +316,16 @@ class WulpusGuiSingleCh(widgets.VBox):
     # Callbacks
 
     def click_scan_ports(self, b):
+        self.log.info("Scanning ports...")
+
         # Update drop-down for ports and make it enabled
         self.found_devices = self.com_link.get_available()
+        self.log.info(f"Found {len(self.found_devices)} devices")
+        for device in self.found_devices:
+            self.log.debug(f"Device: {device.description}")
 
         if len(self.found_devices) == 0:
+            self.log.warning("No devices found")
             self.ports_dd.options = ["No ports found"]
             self.ports_dd.value = "No ports found"
             self.ports_dd.disabled = True
@@ -311,25 +338,38 @@ class WulpusGuiSingleCh(widgets.VBox):
             self.ports_dd.disabled = False
             self.ser_open_button.disabled = False
 
+        self.log.debug("Done scanning ports")
+
     def click_open_port(self, b):
+        self.log.info("Opening/Closing port...")
+
         if not self.port_opened and len(self.ports_dd.options) > 0:
+            self.log.info("Opening port")
+
             device = self.found_devices[self.ports_dd.index]
 
             if not self.com_link.open(device):
                 b.description = "Open port"
                 self.port_opened = False
                 self.start_stop_button.disabled = True
+                self.log.error("Port not opened")
                 return
 
             b.description = "Close port"
             self.port_opened = True
             self.start_stop_button.disabled = False
 
+            self.log.debug("Port opened")
+
         else:
+            self.log.info("Closing port")
+
             self.com_link.close()
             b.description = "Open port"
             self.port_opened = False
             self.start_stop_button.disabled = True
+
+            self.log.debug("Port closed")
 
     def turn_on_off_raw_data_plot(self, change):
         self.raw_data_line.set_visible(change.new)
@@ -360,7 +400,10 @@ class WulpusGuiSingleCh(widgets.VBox):
         )
 
     def click_start_stop_acq(self, b):
+        self.log.info("Start/Stop acquisition")
+
         if not self.acquisition_running:
+            self.log.info("Starting acquisition")
             # Enable the widgets active during acquisition
             self.raw_data_check.disabled = False
             self.filt_data_check.disabled = False
@@ -383,11 +426,15 @@ class WulpusGuiSingleCh(widgets.VBox):
             self.acquisition_running = True
 
             # Run data acquisition loop
+            self.log.info("Starting acquisition thread")
             self.current_data = None
             self.acquisition_thread = Thread(target=self.run_acquisition_loop)
             self.acquisition_thread.start()
 
+            self.log.debug("Acquisition started")
         else:
+            self.log.info("Stopping acquisition")
+
             # Stop acquisition, thread will stop by itself
             self.acquisition_running = False
 
@@ -406,8 +453,11 @@ class WulpusGuiSingleCh(widgets.VBox):
             # Enable serial port related widgets again
             self.ser_open_button.disabled = False
 
+            self.log.debug("Acquisition stopped")
+
     def run_acquisition_loop(self):
         #         self.fig.show()
+        self.log.info("Acquisition thread started")
 
         # Clean data buffer
         acq_length = self.com_link.acq_length
@@ -417,23 +467,31 @@ class WulpusGuiSingleCh(widgets.VBox):
         self.tx_rx_id_arr = np.zeros(number_of_acq, dtype=np.uint8)
         # Acquisition counter
         self.data_cnt = 0
+        self.log.debug("Data buffer cleaned")
 
         # Send a restart command (if system is already running)
+        self.log.info("Sending restart command")
         self.com_link.send_config(self.uss_conf.get_restart_package())
+        self.log.debug("Restart command sent")
 
         # Wait 2.5 seconds (much larger than max measurement period = 2s)
+        self.log.debug("Waiting for 2.5 seconds")
         time.sleep(2.5)
 
         # Generate and send a configuration package
         try:
+            self.log.info("Sending configuration package")
             self.com_link.send_config(self.uss_conf.get_conf_package())
+            self.log.debug("Configuration package sent")
         except ValueError as e:
+            self.log.error(f"Error sending configuration package: {e}")
             self.save_data_label.value = str(e)
             self.acquisition_running = False
             if self.ser_open_button.disabled:
                 self.click_start_stop_acq(self.start_stop_button)
             return
 
+        self.log.info("Starting visualization thread")
         self.visualize = True
         self.current_data = None
         self.current_amode_data = None
@@ -441,13 +499,20 @@ class WulpusGuiSingleCh(widgets.VBox):
         t2.start()
 
         # Readout data in a loop
+        self.log.info("Starting data acquisition loop")
         while self.data_cnt < number_of_acq and self.acquisition_running:
             # Receive the data
             data = self.com_link.receive_data()
             self.save_data_label.value = (
                 f"{np.array(data[0]).shape}, {data[1]}, {data[2]}"
             )
+            self.log.debug(
+                f"Received data: {np.array(data[0]).shape}, {data[1]}, {data[2]}"
+            )
+
             if data is not None:
+                self.log.debug("Data received")
+
                 self.current_data = data
 
                 if data[2] == self.rx_tx_conf_to_display and not self.bmode_check.value:
@@ -473,10 +538,18 @@ class WulpusGuiSingleCh(widgets.VBox):
                 )
                 self.frame_progr_bar.value = self.data_cnt
 
+                self.log.debug(f"Progress: {self.data_cnt}/{number_of_acq}")
+            else:
+                self.log.warning("No data received")
+
+        self.log.info("Acquisition loop finished")
+        self.log.debug("Stopping visualization thread")
         self.visualize = False
         t2.join()
 
+        self.log.info("Sending restart command")
         self.com_link.send_config(self.uss_conf.get_restart_package())
+        self.log.debug("Restart command sent")
 
         # Save data to file if needed
         if self.save_data_check.value:
@@ -489,6 +562,8 @@ class WulpusGuiSingleCh(widgets.VBox):
         # self.click_open_port(self.ser_open_button) # if you want to close the port after acquisition
 
     def visualization(self, number_of_acq):
+        self.log.info("Visualization thread started")
+
         self.frame_progr_bar.max = number_of_acq
 
         while self.visualize:
@@ -506,7 +581,7 @@ class WulpusGuiSingleCh(widgets.VBox):
                     self.bmode_image.set_data(
                         self.data_arr_bmode
                     )  # linear scale, all data
-                except:
+                except Exception as _:
                     # B-mode graph is not initialized yet
                     pass
 
@@ -542,6 +617,8 @@ class WulpusGuiSingleCh(widgets.VBox):
             if sleep_time > 0:
                 time.sleep(sleep_time)
 
+        self.log.info("Visualization thread finished")
+
     # Design bandpass filter
     def design_filter(
         self,
@@ -570,11 +647,15 @@ class WulpusGuiSingleCh(widgets.VBox):
         return np.abs(hilbert(data_in))
 
     def save_data_to_file(self):
+        self.log.info("Saving data to file")
+
         # Check filename
         for i in range(100):
             filename = FILE_NAME_BASE + str(i) + ".npz"
             if not os.path.isfile(filename):
                 break
+
+        self.log.info(f"Saving data to {filename}")
 
         # Save numpy data array to file
         np.savez(
@@ -585,3 +666,5 @@ class WulpusGuiSingleCh(widgets.VBox):
         )
 
         self.save_data_label.value = "Data saved in " + filename
+
+        self.log.info("Data saved")

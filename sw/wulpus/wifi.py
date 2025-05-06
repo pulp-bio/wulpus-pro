@@ -53,9 +53,14 @@ class WulpusWiFi:
         port : int
             The port to connect to.
         """
+        self.log = wifi_logger
+
         self.service_name = service_name
         self.service_type = service_type
         self.port = port
+        self.log.info(
+            f"Initializing WulpusWiFi with service name: {service_name}.{service_type}:{port}"
+        )
 
         self.scanner = WulpusScanner(service_name, service_type)
 
@@ -66,8 +71,6 @@ class WulpusWiFi:
 
         self.acq_length = 400
 
-        self.log = wifi_logger
-        self.log.critical("-" * 40)
         self.log.info("WulpusWiFi initialized")
 
     def get_available(self):
