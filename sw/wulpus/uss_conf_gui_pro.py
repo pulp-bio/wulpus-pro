@@ -1,6 +1,7 @@
 """
-   Copyright (C) 2023 ETH Zurich. All rights reserved.
+   Copyright (C) 2025 ETH Zurich. All rights reserved.
    Author: Cedric Hirschi, ETH Zurich
+           Sergei Vostrikov, ETH Zurich
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
@@ -146,8 +147,6 @@ class WulpusProUssConfigGUI(widgets.VBox, WulpusProUssConfig):
 
         # Disable capture restart, capture timeout and number of samples (per index is sloppy, but works for now)
         entries_acq[4].disabled = True      # num_samples
-        # entries_adv[7].disabled = True      # restart_capt
-        # entries_adv[8].disabled = True      # capt_timeout
 
         self.entries_left = entries_acq + entries_exc
         self.entries_right = entries_adv

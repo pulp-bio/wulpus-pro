@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 ETH Zurich. All rights reserved.
+ * Copyright (C) 2025 ETH Zurich. All rights reserved.
  *
  * Author: Sergei Vostrikov, ETH Zurich
  *
