@@ -15,6 +15,8 @@ typedef enum
     PONG = 0x5A,
     RESET = 0x5B,
     CLOSE = 0x5C,
+    START_RX = 0x5D,
+    STOP_RX = 0x5E,
 } wulpus_command_type_e;
 
 typedef struct __attribute__((packed))

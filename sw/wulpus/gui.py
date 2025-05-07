@@ -51,7 +51,8 @@ gui_logger.propagate = False
 file_handler = logging.FileHandler("wulpus.log")
 file_handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter(
-    "%(asctime)s\t%(name)s\t%(levelname)s\t%(message)s", "%Y-%m-%d %H:%M:%S"
+    "%(asctime)s\t%(name)s\t%(funcName)s\t%(levelname)s\t%(message)s",
+    "%Y-%m-%d %H:%M:%S",
 )
 file_handler.setFormatter(formatter)
 gui_logger.addHandler(file_handler)
@@ -469,6 +470,11 @@ class WulpusGuiSingleCh(widgets.VBox):
         self.data_cnt = 0
         self.log.debug("Data buffer cleaned")
 
+        # Send TX stop
+        self.log.info("Sending RX stop command")
+        self.com_link.toggle_rx(False)
+        self.log.debug("RX stop command sent")
+
         # Send a restart command (if system is already running)
         self.log.info("Sending restart command")
         self.com_link.send_config(self.uss_conf.get_restart_package())
@@ -497,6 +503,11 @@ class WulpusGuiSingleCh(widgets.VBox):
         self.current_amode_data = None
         t2 = Thread(target=self.visualization, args=(number_of_acq,))
         t2.start()
+
+        # Send RX start command
+        self.log.info("Sending RX start command")
+        self.com_link.toggle_rx(True)
+        self.log.debug("RX start command sent")
 
         # Readout data in a loop
         self.log.info("Starting data acquisition loop")
@@ -542,7 +553,14 @@ class WulpusGuiSingleCh(widgets.VBox):
             else:
                 self.log.warning("No data received")
 
-        self.log.info("Acquisition loop finished")
+        self.log.info(
+            f"Acquisition loop finished. data_cnt = {self.data_cnt}, acq_running = {self.acquisition_running}"
+        )
+
+        self.log.info("Stopping RX")
+        self.com_link.toggle_rx(False)
+        self.log.debug("RX stopped")
+
         self.log.debug("Stopping visualization thread")
         self.visualize = False
         t2.join()

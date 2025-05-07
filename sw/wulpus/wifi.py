@@ -2,6 +2,7 @@ import socket
 import struct
 import logging
 from enum import IntEnum
+import time
 
 import numpy as np
 
@@ -18,7 +19,8 @@ wifi_logger.propagate = False
 file_handler = logging.FileHandler("wulpus.log")
 file_handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter(
-    "%(asctime)s\t%(name)s\t%(levelname)s\t%(message)s", "%Y-%m-%d %H:%M:%S"
+    "%(asctime)s\t%(name)s\t%(funcName)s\t%(levelname)s\t%(message)s",
+    "%Y-%m-%d %H:%M:%S",
 )
 file_handler.setFormatter(formatter)
 wifi_logger.addHandler(file_handler)
@@ -35,6 +37,14 @@ class WulpusCommand(IntEnum):
     PONG = 0x5A
     RESET = 0x5B
     CLOSE = 0x5C
+    START_RX = 0x5D
+    STOP_RX = 0x5E
+
+    def __str__(self):
+        return f"{self.__class__.__name__}.{self.name}"
+
+    def __repr__(self):
+        return str(self)
 
 
 class WulpusWiFi:
@@ -168,7 +178,7 @@ class WulpusWiFi:
 
         # Send close command
         try:
-            self.send_command(WulpusCommand.CLOSE, receive=False)
+            self.send_command(WulpusCommand.CLOSE)
         except Exception as e:
             self.log.error(f"Error sending close command: {e}")
             return False
@@ -276,6 +286,11 @@ class WulpusWiFi:
         Send a configuration package to the device.
         """
         self.log.info(f"Sending configuration package of length {len(conf_bytes_pack)}")
+        # TODO: Add better receiving
+        self.log.debug(f"Configuration package ({len(conf_bytes_pack)} bytes):")
+        for byte in conf_bytes_pack:
+            self.log.debug(f"  0x{byte:02X}")
+        self.flush()
         self.send_command(WulpusCommand.SET_CONFIG, conf_bytes_pack)
         self.log.info("Sent configuration package")
 
@@ -312,30 +327,32 @@ class WulpusWiFi:
         return header, data
 
     def _get_rf_data_and_info__(self, bytes_arr: bytes):
+        # First byte: Garbage (u8)
         # First 1 byte: tx_rx_id (u8)
         # 2 bytes: acq_nr (u16)
         # Rest: rf_arr (i2)
         if len(bytes_arr) < 3:
-            raise ValueError("Invalid data length. Expected at least 3 bytes.")
+            self.log.warning(
+                f"Invalid data length. Expected at least 3 bytes, got {len(bytes_arr)}"
+            )
+            return None
 
-        struct_format = "<BH"
-        data = struct.unpack(struct_format, bytes_arr[:3])
+        struct_format = "<BBH"
+        data = struct.unpack(struct_format, bytes_arr[:4])
         data = {
-            "tx_rx_id": data[0],
-            "acq_nr": data[1],
-            "rf_arr": np.frombuffer(bytes_arr[3:-1], dtype="<i2"),
+            "tx_rx_id": data[1],
+            "acq_nr": data[2],
+            "rf_arr": np.frombuffer(bytes_arr[4:], dtype="<i2"),
         }
         self.log.debug(
             f"Decoded RF data: TRX ID: {data['tx_rx_id']}, ACQ NR: {data['acq_nr']}, DATA: {len(data['rf_arr'])}",
         )
 
         if len(data["rf_arr"]) != self.acq_length:
-            self.log.error(
+            self.log.warning(
                 f"Invalid data length. Expected {self.acq_length}, got {len(data['rf_arr'])}"
             )
-            raise ValueError(
-                f"Invalid data length. Expected {self.acq_length}, got {len(data['rf_arr'])}"
-            )
+            return None
 
         return data["rf_arr"], data["acq_nr"], data["tx_rx_id"]
 
@@ -364,25 +381,29 @@ class WulpusWiFi:
                 # No complete package in backlog, receive new data
                 self.backlog = b""
 
-        try:
-            header, data = self.receive_command(strict_length=False)
-        except socket.timeout:
-            return [], None, None
+        start_time = time.time()
 
-        if len(data) != header["length"]:
-            self.log.warning(
-                f"Pushing incomplete data to backlog. Expected {header['length']}, got {len(data)}"
-            )
-            data += self.sock.recv(header["length"] - len(data))
+        while time.time() - start_time < 5:
+            try:
+                header, data = self.receive_command(strict_length=False)
+            except socket.timeout:
+                self.log.warning("Timeout while receiving data")
+                return None
 
-        # Check command
-        if header["command"] != WulpusCommand.GET_DATA:
-            self.log.error(
-                f"Invalid command. Expected {WulpusCommand.GET_DATA}, got {header['command']}"
-            )
-            raise ValueError(
-                f"Invalid command. Expected {WulpusCommand.GET_DATA}, got {header['command']}"
-            )
+            if len(data) != header["length"]:
+                self.log.warning(
+                    f"Pushing incomplete data to backlog. Expected {header['length']}, got {len(data)}"
+                )
+                data += self.sock.recv(header["length"] - len(data))
+
+            # Check command
+            if header["command"] != WulpusCommand.GET_DATA:
+                self.log.warning(
+                    f"Invalid command. Expected {WulpusCommand.GET_DATA}, got {header['command']}"
+                )
+                return None
+
+            break
 
         # Check if there is magic in the data
         if b"wulpus" in data:
@@ -415,3 +436,22 @@ class WulpusWiFi:
 
         self.log.debug("Done pinging device")
         return header, data
+
+    def toggle_rx(self, state: bool):
+        """
+        Toggle RX state.
+        """
+        self.log.info(f"Toggling RX state to {state}")
+
+        self.flush()
+        try:
+            if state:
+                self.send_command(WulpusCommand.START_RX)
+            else:
+                self.send_command(WulpusCommand.STOP_RX)
+        except Exception as e:
+            self.log.error(f"Error toggling RX state: {e}")
+            return False
+
+        self.log.debug("Done toggling RX state")
+        return True

@@ -36,8 +36,12 @@
 
 #include "helpers.h"
 
-#define LOG_LOCAL_LEVEL ESP_LOG_INFO
+#define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
 #include <esp_log.h>
+
+#define TCP_PORT_MUTEX_TIMEOUT pdMS_TO_TICKS(1000)
+#define SPI_MUTEX_TIMEOUT pdMS_TO_TICKS(1000)
+#define DATA_READY_TIMEOUT pdMS_TO_TICKS(1000)
 
 static const char *TAG = "main";
 
@@ -50,10 +54,14 @@ spi_device_handle_t spi = NULL;
 
 TaskHandle_t tcp_server_task_handle = NULL;
 TaskHandle_t data_handler_task_handle = NULL;
+
 static QueueHandle_t gpio_evt_queue = NULL;
+
 SemaphoreHandle_t data_ready_semaphore = NULL;
-bool do_transmits = false;
-bool link_ready_set = false;
+SemaphoreHandle_t tcp_port_mutex = NULL;
+SemaphoreHandle_t spi_mutex = NULL;
+
+bool transmits_enabled = false;
 
 uint8_t spi_rx_buffer[CONFIG_WP_DATA_RX_LENGTH + HEADER_LEN];
 
@@ -90,7 +98,7 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_pm_configure(&pm_config));
 #endif
 
-    esp_log_level_set(TAG, ESP_LOG_INFO);
+    esp_log_level_set(TAG, LOG_LOCAL_LEVEL);
 
     // Initialize LED moved to bsp component
     bsp_update_led(STATUS_OFF);
@@ -135,6 +143,19 @@ void app_main(void)
         return;
     }
 
+    tcp_port_mutex = xSemaphoreCreateMutex();
+    if (tcp_port_mutex == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to create mutex");
+        return;
+    }
+    spi_mutex = xSemaphoreCreateMutex();
+    if (spi_mutex == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to create mutex");
+        return;
+    }
+
     // Create data handler
     xTaskCreate(data_handler_task, "data_handler", CONFIG_WP_HANDLER_STACK_SIZE, NULL, CONFIG_WP_HANDLER_PRIORITY, &data_handler_task_handle);
     if (data_handler_task_handle == NULL)
@@ -158,8 +179,8 @@ void app_main(void)
     };
     spi_device_interface_config_t dev_cfg = {
         // .clock_speed_hz = CONFIG_WP_SPI_CLOCK_SPEED, // TODO: Change back when good frequency is found
-        .clock_speed_hz = 2e6,
-        .mode = 0,
+        .clock_speed_hz = 1e6,
+        .mode = 1,
         .spics_io_num = CONFIG_WP_SPI_CS,
         .queue_size = 3,
         .cs_ena_pretrans = 16,
@@ -179,8 +200,8 @@ void app_main(void)
 #endif
     ESP_ERROR_CHECK(provisioner_wait());
 
-    // Print wifi stats
-    print_wifi_stats();
+    // // Print wifi stats
+    // print_wifi_stats();
 
     // Start but suspend TWT
     provisioner_twt_setup();
@@ -260,6 +281,9 @@ static void tcp_server_task(void *pvParameters)
 
         provisioner_twt_suspend(1);
 
+        // Clear data ready signal
+        xSemaphoreTake(data_ready_semaphore, 0);
+
         bool run = true;
         while (run)
         {
@@ -297,7 +321,13 @@ static void tcp_server_task(void *pvParameters)
             resp_header = recv_header;
             resp_header.data_length = 0; // Set data length to 0 for the header response
 
+            if (xSemaphoreTake(tcp_port_mutex, TCP_PORT_MUTEX_TIMEOUT) != pdTRUE)
+            {
+                ESP_LOGE(TAG, "Failed to take TCP port mutex");
+                continue;
+            }
             int err = send(response_socket.fd, (uint8_t *)&resp_header, HEADER_LEN, 0);
+            xSemaphoreGive(tcp_port_mutex);
             if (err < 0)
             {
                 ESP_LOGE(TAG, "Error occurred during sending: %s", strerror(errno));
@@ -321,7 +351,13 @@ static void tcp_server_task(void *pvParameters)
                 }
 
                 // Receive data
+                if (xSemaphoreTake(tcp_port_mutex, TCP_PORT_MUTEX_TIMEOUT) != pdTRUE)
+                {
+                    ESP_LOGE(TAG, "Failed to take TCP port mutex");
+                    continue;
+                }
                 len = recv(response_socket.fd, command_data.data, command_data.data_length, 0);
+                xSemaphoreGive(tcp_port_mutex);
                 if (len < 0)
                 {
                     ESP_LOGE(TAG, "recv failed: %s", strerror(errno));
@@ -344,46 +380,42 @@ static void tcp_server_task(void *pvParameters)
             case SET_CONFIG:
                 ESP_LOGI(TAG, "Received set config command");
 
-                // Disable transmits
-                do_transmits = false;
+                // FIXME: This could be made tidier in the connection callback, but it's the same in the nRF52 firmware
+                ESP_ERROR_CHECK(gpio_hold_dis(CONFIG_WP_GPIO_LINK_READY));
+                ESP_ERROR_CHECK(gpio_set_level(CONFIG_WP_GPIO_LINK_READY, 1));
+                ESP_ERROR_CHECK(gpio_hold_en(CONFIG_WP_GPIO_LINK_READY));
+                ESP_LOGI(TAG, "Link ready signal set");
 
-                // Set link ready signal
-                if (!link_ready_set)
+                // Wait for data ready signal
+                if (xSemaphoreTake(data_ready_semaphore, DATA_READY_TIMEOUT) != pdTRUE)
                 {
-                    // Clear data ready signal
-                    xSemaphoreTake(data_ready_semaphore, 0);
-
-                    // FIXME: This could be made tidier in the connection callback, but it's the same in the nRF52 firmware
-                    ESP_ERROR_CHECK(gpio_hold_dis(CONFIG_WP_GPIO_LINK_READY));
-                    ESP_ERROR_CHECK(gpio_set_level(CONFIG_WP_GPIO_LINK_READY, 1));
-                    ESP_ERROR_CHECK(gpio_hold_en(CONFIG_WP_GPIO_LINK_READY));
-                    ESP_LOGI(TAG, "Link ready signal set");
-                    // link_ready_set = true;
-
-                    // Wait for data ready signal
-                    if (xSemaphoreTake(data_ready_semaphore, pdMS_TO_TICKS(1000)) == pdTRUE)
-                    {
-                        ESP_LOGI(TAG, "Data ready signal received");
-                    }
-                    else
-                    {
-                        ESP_LOGE(TAG, "Failed to take data ready semaphore");
-                        break;
-                    }
+                    ESP_LOGE(TAG, "Failed to take data ready semaphore");
+                    break;
                 }
 
                 uint8_t spi_tx_buffer[804] = {0};
                 memcpy(spi_tx_buffer, command_data.data, recv_header.data_length);
+
+                ESP_LOGD(TAG, "Configuration package (%u bytes):", recv_header.data_length);
+                for (size_t i = 0; i < recv_header.data_length; i++)
+                {
+                    ESP_LOGD(TAG, "  0x%02X ", spi_tx_buffer[i]);
+                }
 
                 // Send configuration via SPI to the device
                 spi_transaction_t tx = {
                     .length = 804 * 8,
                     .tx_buffer = spi_tx_buffer,
                     .rx_buffer = NULL,
-                    .flags = 0,
                 };
                 gpio_hold_dis(CONFIG_WP_SPI_CS);
+                if (xSemaphoreTake(spi_mutex, SPI_MUTEX_TIMEOUT) != pdTRUE)
+                {
+                    ESP_LOGE(TAG, "Failed to take SPI mutex");
+                    continue;
+                }
                 esp_err_t ret = spi_device_transmit(spi, &tx);
+                xSemaphoreGive(spi_mutex);
                 if (ret != ESP_OK)
                 {
                     ESP_LOGE(TAG, "Error occurred during SPI transmission: %s", esp_err_to_name(ret));
@@ -402,9 +434,6 @@ static void tcp_server_task(void *pvParameters)
                 // ESP_ERROR_CHECK(gpio_hold_en(CONFIG_WP_GPIO_LINK_READY));
                 // ESP_LOGI(TAG, "Link ready signal reset");
 
-                // Enable transmits
-                do_transmits = true;
-
                 break;
             case GET_DATA:
                 ESP_LOGW(TAG, "GET_DATA is not implemented");
@@ -418,6 +447,11 @@ static void tcp_server_task(void *pvParameters)
                     .command = PONG,
                     .data_length = 4,
                 };
+                if (xSemaphoreTake(tcp_port_mutex, TCP_PORT_MUTEX_TIMEOUT) != pdTRUE)
+                {
+                    ESP_LOGE(TAG, "Failed to take TCP port mutex");
+                    continue;
+                }
                 int err = send(response_socket.fd, (uint8_t *)&response, HEADER_LEN, 0);
                 if (err < 0)
                 {
@@ -426,6 +460,7 @@ static void tcp_server_task(void *pvParameters)
                     break;
                 }
                 err = send(response_socket.fd, (uint8_t *)"pong", 4, 0);
+                xSemaphoreGive(tcp_port_mutex);
                 if (err < 0)
                 {
                     ESP_LOGE(TAG, "Error occurred during sending data: %s", strerror(errno));
@@ -444,6 +479,25 @@ static void tcp_server_task(void *pvParameters)
                 // Exit loop
                 run = false;
                 break;
+            case START_RX:
+                ESP_LOGI(TAG, "Received start RX command");
+                // Enable transmits
+                transmits_enabled = true;
+
+                // By now, MSP could have sent a data ready signal, but we missed it
+                if (xSemaphoreTake(data_ready_semaphore, 0) == pdTRUE)
+                {
+                    // Push dummy event into queue, since handler had to ignore last valid one
+                    uint32_t io_num = CONFIG_WP_GPIO_DATA_READY;
+                    xQueueSend(gpio_evt_queue, &io_num, 0);
+                }
+
+                break;
+            case STOP_RX:
+                ESP_LOGI(TAG, "Received stop RX command");
+                // Disable transmits
+                transmits_enabled = false;
+                break;
             }
             ESP_LOGI(TAG, "Command %d processed", recv_header.command);
         }
@@ -457,8 +511,6 @@ static void tcp_server_task(void *pvParameters)
         ESP_LOGI(TAG, "Socket closed");
 
         provisioner_twt_suspend(0);
-
-        vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 
     vTaskDelete(NULL);
@@ -488,25 +540,29 @@ static void data_handler_task(void *pvParameters)
         if (xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY) == pdTRUE)
         {
             // Data is ready, handle it here
-            ESP_LOGI(TAG, "Data ready signal received on GPIO %lu", io_num);
+            ESP_LOGD(TAG, "Data ready signal received on GPIO %lu", io_num);
             bsp_update_led(STATUS_TRANSMITTING);
 
-            if (!do_transmits)
-            {
-                xSemaphoreGive(data_ready_semaphore);
-            }
+            // Give data ready semaphore
+            xSemaphoreGive(data_ready_semaphore);
 
             // If socket is open, send data
             // Header: "data <length>"
             // Data: <data>
-            if ((response_socket.fd >= 0) && do_transmits)
+            if (transmits_enabled & (response_socket.fd >= 0))
             {
                 // Get current time
                 uint32_t current_time = esp_timer_get_time();
 
                 // Read data from the device
                 gpio_hold_dis(CONFIG_WP_SPI_CS);
+                if (xSemaphoreTake(spi_mutex, SPI_MUTEX_TIMEOUT) != pdTRUE)
+                {
+                    ESP_LOGE(TAG, "Failed to take SPI mutex");
+                    continue;
+                }
                 esp_err_t ret = spi_device_transmit(spi, &rx);
+                xSemaphoreGive(spi_mutex);
                 if (ret != ESP_OK)
                 {
                     ESP_LOGE(TAG, "Error occurred during SPI reception: %s", esp_err_to_name(ret));
@@ -516,7 +572,17 @@ static void data_handler_task(void *pvParameters)
                 gpio_hold_en(CONFIG_WP_SPI_CS);
 
                 uint32_t elapsed_time = esp_timer_get_time() - current_time;
-                ESP_LOGI(TAG, "SPI reception took %lu us", elapsed_time);
+                ESP_LOGD(TAG, "SPI reception took %lu us", elapsed_time);
+
+                ESP_LOGD(TAG, "TRX ID: %u", *(uint8_t *)(spi_rx_buffer + HEADER_LEN + 1));
+                ESP_LOGD(TAG, "ACQ NR: %u", *(uint16_t *)(spi_rx_buffer + HEADER_LEN + 2));
+
+                uint32_t data_sum = 0;
+                for (int i = 0; i < CONFIG_WP_DATA_RX_LENGTH; i++)
+                {
+                    data_sum += *(uint8_t *)(spi_rx_buffer + HEADER_LEN + 3 + i);
+                }
+                ESP_LOGD(TAG, "Data sum: %lu", data_sum);
 
                 current_time = esp_timer_get_time();
 
@@ -524,7 +590,13 @@ static void data_handler_task(void *pvParameters)
                 // setsockopt(response_socket.fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
 
                 // Send header and data
+                if (xSemaphoreTake(tcp_port_mutex, TCP_PORT_MUTEX_TIMEOUT) != pdTRUE)
+                {
+                    ESP_LOGE(TAG, "Failed to take TCP port mutex");
+                    continue;
+                }
                 int err = send(response_socket.fd, spi_rx_buffer, CONFIG_WP_DATA_RX_LENGTH + HEADER_LEN, 0);
+                xSemaphoreGive(tcp_port_mutex);
                 if (err < 0)
                 {
                     ESP_LOGE(TAG, "Error occurred during data: %s", strerror(errno));
@@ -535,7 +607,7 @@ static void data_handler_task(void *pvParameters)
                 // ESP_LOGI(TAG, "Sent successfully");
 
                 elapsed_time = esp_timer_get_time() - current_time;
-                ESP_LOGI(TAG, "Data sending took  %lu us", elapsed_time);
+                ESP_LOGD(TAG, "Data sending took  %lu us", elapsed_time);
             }
 
             bsp_update_led(STATUS_IDLE);
