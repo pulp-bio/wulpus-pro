@@ -443,7 +443,7 @@ class WulpusWiFi:
         """
         self.log.info(f"Toggling RX state to {state}")
 
-        self.flush()
+        # self.flush()
         try:
             if state:
                 self.send_command(WulpusCommand.START_RX)
@@ -451,7 +451,6 @@ class WulpusWiFi:
                 self.send_command(WulpusCommand.STOP_RX)
         except Exception as e:
             self.log.error(f"Error toggling RX state: {e}")
-            return False
 
         self.log.debug("Done toggling RX state")
         return True

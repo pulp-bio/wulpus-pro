@@ -36,7 +36,7 @@
 
 #include "helpers.h"
 
-#define LOG_LOCAL_LEVEL ESP_LOG_DEBUG
+#define LOG_LOCAL_LEVEL ESP_LOG_INFO
 #include <esp_log.h>
 
 #define TCP_PORT_MUTEX_TIMEOUT pdMS_TO_TICKS(1000)
@@ -178,8 +178,7 @@ void app_main(void)
         .max_transfer_sz = CONFIG_WP_SPI_MAX_TRANSFER_SIZE,
     };
     spi_device_interface_config_t dev_cfg = {
-        // .clock_speed_hz = CONFIG_WP_SPI_CLOCK_SPEED, // TODO: Change back when good frequency is found
-        .clock_speed_hz = 1e6,
+        .clock_speed_hz = CONFIG_WP_SPI_CLOCK_SPEED,
         .mode = 1,
         .spics_io_num = CONFIG_WP_SPI_CS,
         .queue_size = 3,
@@ -541,7 +540,7 @@ static void data_handler_task(void *pvParameters)
         {
             // Data is ready, handle it here
             ESP_LOGD(TAG, "Data ready signal received on GPIO %lu", io_num);
-            bsp_update_led(STATUS_TRANSMITTING);
+            // bsp_update_led(STATUS_TRANSMITTING);
 
             // Give data ready semaphore
             xSemaphoreGive(data_ready_semaphore);
@@ -566,25 +565,25 @@ static void data_handler_task(void *pvParameters)
                 if (ret != ESP_OK)
                 {
                     ESP_LOGE(TAG, "Error occurred during SPI reception: %s", esp_err_to_name(ret));
-                    bsp_update_led(STATUS_ERROR);
+                    // bsp_update_led(STATUS_ERROR);
                     continue;
                 }
                 gpio_hold_en(CONFIG_WP_SPI_CS);
 
-                uint32_t elapsed_time = esp_timer_get_time() - current_time;
-                ESP_LOGD(TAG, "SPI reception took %lu us", elapsed_time);
+                // uint32_t elapsed_time = esp_timer_get_time() - current_time;
+                // ESP_LOGD(TAG, "SPI reception took %lu us", elapsed_time);
 
-                ESP_LOGD(TAG, "TRX ID: %u", *(uint8_t *)(spi_rx_buffer + HEADER_LEN + 1));
-                ESP_LOGD(TAG, "ACQ NR: %u", *(uint16_t *)(spi_rx_buffer + HEADER_LEN + 2));
+                // ESP_LOGD(TAG, "TRX ID: %u", *(uint8_t *)(spi_rx_buffer + HEADER_LEN + 1));
+                // ESP_LOGD(TAG, "ACQ NR: %u", *(uint16_t *)(spi_rx_buffer + HEADER_LEN + 2));
 
-                uint32_t data_sum = 0;
-                for (int i = 0; i < CONFIG_WP_DATA_RX_LENGTH; i++)
-                {
-                    data_sum += *(uint8_t *)(spi_rx_buffer + HEADER_LEN + 3 + i);
-                }
-                ESP_LOGD(TAG, "Data sum: %lu", data_sum);
+                // uint32_t data_sum = 0;
+                // for (int i = 0; i < CONFIG_WP_DATA_RX_LENGTH; i++)
+                // {
+                //     data_sum += *(uint8_t *)(spi_rx_buffer + HEADER_LEN + 3 + i);
+                // }
+                // ESP_LOGD(TAG, "Data sum: %lu", data_sum);
 
-                current_time = esp_timer_get_time();
+                // current_time = esp_timer_get_time();
 
                 // int flag = 1;
                 // setsockopt(response_socket.fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
@@ -600,17 +599,17 @@ static void data_handler_task(void *pvParameters)
                 if (err < 0)
                 {
                     ESP_LOGE(TAG, "Error occurred during data: %s", strerror(errno));
-                    bsp_update_led(STATUS_ERROR);
+                    // bsp_update_led(STATUS_ERROR);
                     continue;
                 }
 
                 // ESP_LOGI(TAG, "Sent successfully");
 
-                elapsed_time = esp_timer_get_time() - current_time;
-                ESP_LOGD(TAG, "Data sending took  %lu us", elapsed_time);
+                // elapsed_time = esp_timer_get_time() - current_time;
+                // ESP_LOGD(TAG, "Data sending took  %lu us", elapsed_time);
             }
 
-            bsp_update_led(STATUS_IDLE);
+            // bsp_update_led(STATUS_IDLE);
         }
     }
 }

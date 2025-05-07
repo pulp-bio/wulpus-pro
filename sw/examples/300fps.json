@@ -1,0 +1,21 @@
+{
+    "dcdc_turnon": 100,
+    "meas_period": 3300,
+    "trans_freq": 2250000,
+    "pulse_freq": 2250000,
+    "num_pulses": 2,
+    "sampling_freq": 8000000,
+    "num_samples": 400,
+    "rx_gain": 3.5,
+    "num_txrx_configs": 1,
+    "start_hvmuxrx": 500,
+    "start_ppg": 500,
+    "turnon_adc": 5,
+    "start_pgainbias": 5,
+    "start_adcsampl": 503,
+    "restart_capt": 3000,
+    "capt_timeout": 3000,
+    "vga_rc_prech_cyc": 0,
+    "vga_slope_code": 256,
+    "num_acqs": 1000
+}

@@ -524,6 +524,44 @@ class WulpusGuiSingleCh(widgets.VBox):
             if data is not None:
                 self.log.debug("Data received")
 
+                if data[1] < 0 or data[1] >= number_of_acq:
+                    self.log.warning(
+                        f"Acquisition number {data[1]} is out of range [0, {number_of_acq}]"
+                    )
+                    # Swap data[1] with data[2]
+                    tmp = data[1]
+                    data[1] = data[2]
+                    data[2] = tmp
+                    self.log.debug(
+                        f"Swapped acquisition number {data[1]} with RX TX config {data[2]}"
+                    )
+
+                    # Check if it's still in range
+                    if data[1] < 0 or data[1] >= number_of_acq:
+                        self.log.warning(
+                            f"Acquisition number {data[1]} is out of range [0, {number_of_acq}]"
+                        )
+                        continue
+
+                if data[2] < 0 or data[2] >= self.uss_conf.num_txrx_configs:
+                    self.log.warning(
+                        f"RX TX config {data[2]} is out of range [0, {self.uss_conf.num_txrx_configs}]"
+                    )
+                    # Swap data[1] with data[2]
+                    tmp = data[1]
+                    data[1] = data[2]
+                    data[2] = tmp
+                    self.log.debug(
+                        f"Swapped acquisition number {data[1]} with RX TX config {data[2]}"
+                    )
+
+                    # Check if it's still in range
+                    if data[2] < 0 or data[2] >= self.uss_conf.num_txrx_configs:
+                        self.log.warning(
+                            f"RX TX config {data[2]} is out of range [0, {self.uss_conf.num_txrx_configs}]"
+                        )
+                        continue
+
                 self.current_data = data
 
                 if data[2] == self.rx_tx_conf_to_display and not self.bmode_check.value:
@@ -566,7 +604,11 @@ class WulpusGuiSingleCh(widgets.VBox):
         t2.join()
 
         self.log.info("Sending restart command")
-        self.com_link.send_config(self.uss_conf.get_restart_package())
+        try:
+            self.com_link.send_config(self.uss_conf.get_restart_package())
+        except ValueError as e:
+            self.log.error(f"Error sending restart command: {e}")
+            self.save_data_label.value = str(e)
         self.log.debug("Restart command sent")
 
         # Save data to file if needed
