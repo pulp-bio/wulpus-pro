@@ -163,7 +163,7 @@ void initAllPowerSwitches(void)
 
     // Envelope Detector Enable control (Disable by default)
     GPIO_setAsOutputPin(GPIO_PORT_ENV_DET_EN, GPIO_PIN_ENV_DET_EN);
-    GPIO_setOutputLowOnPin(GPIO_PORT_ENV_DET_EN, GPIO_PIN_ENV_DET_EN);
+    GPIO_setOutputHighOnPin(GPIO_PORT_ENV_DET_EN, GPIO_PIN_ENV_DET_EN);
 
     // VGA Power Enable
     GPIO_setAsOutputPin(GPIO_PORT_VGA_PWR_EN, GPIO_PIN_VGA_PWR_EN);
