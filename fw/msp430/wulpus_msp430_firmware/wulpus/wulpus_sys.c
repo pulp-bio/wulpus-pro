@@ -97,7 +97,8 @@ bool extractUsConfig(uint8_t * spi_rx, msp_config_t * msp_config)
     msp_config->overSamplRate  = (sdhs_over_sampl_rate_t)READ_uint16(spi_rx + 14);
     msp_config->sampleSize     = READ_uint16(spi_rx + 16);
     msp_config->rxGain         = READ_uint8(spi_rx + 18);
-    msp_config->txRxConfLen    = READ_uint8(spi_rx + 19);
+    msp_config->enEnvDetector  = READ_uint8(spi_rx + 19);
+    msp_config->txRxConfLen    = READ_uint8(spi_rx + 20);
 
     if (msp_config->txRxConfLen > TX_RX_CONF_LEN_MAX)
         return 0;
@@ -106,11 +107,11 @@ bool extractUsConfig(uint8_t * spi_rx, msp_config_t * msp_config)
     uint8_t i;
     for (i = 0; i < (msp_config->txRxConfLen); i++)
     {
-        msp_config->txConfigs[i] = READ_uint16(spi_rx + 20 + 4*i);
-        msp_config->rxConfigs[i] = READ_uint16(spi_rx + 22 + 4*i);
+        msp_config->txConfigs[i] = READ_uint16(spi_rx + 21 + 4*i);
+        msp_config->rxConfigs[i] = READ_uint16(spi_rx + 23 + 4*i);
     }
 
-    uint8_t offset = 20 + 4*(msp_config->txRxConfLen);
+    uint8_t offset = 21 + 4*(msp_config->txRxConfLen);
 
     // Copy the data from the Advanced settings section
     msp_config->startHvMuxRxCnt         = READ_uint16(spi_rx + offset);
@@ -163,7 +164,7 @@ void initAllPowerSwitches(void)
 
     // Envelope Detector Enable control (Disable by default)
     GPIO_setAsOutputPin(GPIO_PORT_ENV_DET_EN, GPIO_PIN_ENV_DET_EN);
-    GPIO_setOutputHighOnPin(GPIO_PORT_ENV_DET_EN, GPIO_PIN_ENV_DET_EN);
+    GPIO_setOutputLowOnPin(GPIO_PORT_ENV_DET_EN, GPIO_PIN_ENV_DET_EN);
 
     // VGA Power Enable
     GPIO_setAsOutputPin(GPIO_PORT_VGA_PWR_EN, GPIO_PIN_VGA_PWR_EN);
