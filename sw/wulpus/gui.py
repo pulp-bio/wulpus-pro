@@ -513,70 +513,39 @@ class WulpusGuiSingleCh(widgets.VBox):
         self.log.info("Starting data acquisition loop")
         while self.data_cnt < number_of_acq and self.acquisition_running:
             # Receive the data
-            data = self.com_link.receive_data()
+            rf_arr, acq_nr, tx_rx_id = self.com_link.receive_data()
             self.save_data_label.value = (
-                f"{np.array(data[0]).shape}, {data[1]}, {data[2]}"
+                f"{np.array(rf_arr).shape}, {acq_nr}, {tx_rx_id}"
             )
             self.log.debug(
-                f"Received data: {np.array(data[0]).shape}, {data[1]}, {data[2]}"
+                f"Received data: {np.array(rf_arr).shape}, {acq_nr}, {tx_rx_id}"
             )
 
-            if data is not None:
+            # For now, we just ignore invalid data
+            if (
+                rf_arr is not None
+                and (acq_nr >= 0 and acq_nr < number_of_acq)
+                and (tx_rx_id >= 0 and tx_rx_id < self.uss_conf.num_txrx_configs)
+            ):
                 self.log.debug("Data received")
+                self.current_data = rf_arr
 
-                if data[1] < 0 or data[1] >= number_of_acq:
-                    self.log.warning(
-                        f"Acquisition number {data[1]} is out of range [0, {number_of_acq}]"
-                    )
-                    # Swap data[1] with data[2]
-                    tmp = data[1]
-                    data[1] = data[2]
-                    data[2] = tmp
-                    self.log.debug(
-                        f"Swapped acquisition number {data[1]} with RX TX config {data[2]}"
-                    )
-
-                    # Check if it's still in range
-                    if data[1] < 0 or data[1] >= number_of_acq:
-                        self.log.warning(
-                            f"Acquisition number {data[1]} is out of range [0, {number_of_acq}]"
-                        )
-                        continue
-
-                if data[2] < 0 or data[2] >= self.uss_conf.num_txrx_configs:
-                    self.log.warning(
-                        f"RX TX config {data[2]} is out of range [0, {self.uss_conf.num_txrx_configs}]"
-                    )
-                    # Swap data[1] with data[2]
-                    tmp = data[1]
-                    data[1] = data[2]
-                    data[2] = tmp
-                    self.log.debug(
-                        f"Swapped acquisition number {data[1]} with RX TX config {data[2]}"
-                    )
-
-                    # Check if it's still in range
-                    if data[2] < 0 or data[2] >= self.uss_conf.num_txrx_configs:
-                        self.log.warning(
-                            f"RX TX config {data[2]} is out of range [0, {self.uss_conf.num_txrx_configs}]"
-                        )
-                        continue
-
-                self.current_data = data
-
-                if data[2] == self.rx_tx_conf_to_display and not self.bmode_check.value:
-                    self.current_amode_data = data[0]
+                if (
+                    tx_rx_id == self.rx_tx_conf_to_display
+                    and not self.bmode_check.value
+                ):
+                    self.current_amode_data = rf_arr
 
                 # Save data
-                self.data_arr[:, self.data_cnt] = data[0]
+                self.data_arr[:, self.data_cnt] = rf_arr
 
                 # and other params
-                self.acq_num_arr[self.data_cnt] = data[1]
-                self.tx_rx_id_arr[self.data_cnt] = data[2]
+                self.acq_num_arr[self.data_cnt] = acq_nr
+                self.tx_rx_id_arr[self.data_cnt] = tx_rx_id
 
                 # Save data to specific z
                 self.data_arr_bmode[self.tx_rx_id_arr[self.data_cnt]] = (
-                    self.get_envelope(self.filter_data(data[0]))
+                    self.get_envelope(self.filter_data(rf_arr))
                 )
 
                 self.data_cnt = self.data_cnt + 1
