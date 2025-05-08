@@ -216,6 +216,7 @@ typedef struct
     uint16_t sampleSize;
     uint8_t  rxGain;
     uint16_t measPeriod;
+    uint8_t  enEnvDetector;
 
     // VGA gain settings
     uint16_t vgaRcPrechargeCycles;

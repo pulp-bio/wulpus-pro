@@ -85,6 +85,16 @@ int main(void)
         // Configure Uss according to the new package
         confUsSubsystem();
 
+        // Configure envelope extractor
+        if (msp_config.enEnvDetector)
+        {
+            enableEnvDet();
+        }
+        else
+        {
+            disableEnvDet();
+        }
+
         // Configure the events of slow and fast timers
         confTimerSlowSwEvents();
         confTimerFastSwEvents();
