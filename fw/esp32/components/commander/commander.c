@@ -9,23 +9,14 @@
 
 #include "sock.h"
 
-char *command_names[] = {
-    [SET_CONFIG] = "SET_CONFIG",
-    [GET_DATA] = "GET_DATA",
-    [PING] = "PING",
-    [PONG] = "PONG",
-    [RESET] = "RESET",
-    [CLOSE] = "CLOSE",
-    [START_RX] = "START_RX",
-    [STOP_RX] = "STOP_RX",
-};
-
 esp_err_t command_recv(socket_instance_t *socket, wulpus_command_header_t *header, void *data, size_t *len)
 {
+    esp_log_level_set(TAG, LOG_LOCAL_LEVEL);
+
     ESP_LOGD(TAG, "Receiving command...");
     esp_err_t err = ESP_OK;
 
-    size_t recv_len = *len;
+    size_t recv_len = HEADER_LEN;
     err = sock_recv(socket, header, &recv_len);
     if (err != ESP_OK)
     {
@@ -125,9 +116,27 @@ esp_err_t command_send(socket_instance_t *socket, wulpus_command_header_t *heade
 
 char *command_name(wulpus_command_type_e command)
 {
-    if (command < MIN_COMMAND_ID || command > MAX_COMMAND_ID)
+    switch (command)
     {
-        return "UNKNOWN";
+    case SET_CONFIG:
+        return "SET_CONFIG";
+    case GET_DATA:
+        return "GET_DATA";
+    case PING:
+        return "PING";
+    case PONG:
+        return "PONG";
+    case RESET:
+        return "RESET";
+    case CLOSE:
+        return "CLOSE";
+    case START_RX:
+        return "START_RX";
+    case STOP_RX:
+        return "STOP_RX";
+    default:
+        return "UNKNOWN_COMMAND";
     }
-    return command_names[command - MIN_COMMAND_ID];
+
+    return "UNKNOWN_COMMAND";
 }

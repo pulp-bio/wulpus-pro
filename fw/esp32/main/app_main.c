@@ -221,6 +221,14 @@ static void tcp_server_task(void *pvParameters)
         return;
     }
 
+    response_socket = sock_create();
+    if (response_socket.mutex == NULL)
+    {
+        ESP_LOGE(TAG, "Failed to create response socket");
+        vTaskDelete(NULL);
+        return;
+    }
+
     // Initialize and bind listening socket
     ESP_ERROR_CHECK(sock_init(&listen_sock));
     ESP_ERROR_CHECK(sock_listen(&listen_sock, INADDR_ANY, CONFIG_WP_SOCKET_PORT));
@@ -267,7 +275,7 @@ static void tcp_server_task(void *pvParameters)
                 ESP_ERROR_CHECK(gpio_hold_dis(CONFIG_WP_GPIO_LINK_READY));
                 ESP_ERROR_CHECK(gpio_set_level(CONFIG_WP_GPIO_LINK_READY, 1));
                 ESP_ERROR_CHECK(gpio_hold_en(CONFIG_WP_GPIO_LINK_READY));
-                ESP_LOGI(TAG, "Link ready signal set");
+                ESP_LOGD(TAG, "Link ready signal set");
 
                 // Wait for data ready signal
                 if (xSemaphoreTake(data_ready_semaphore, DATA_READY_TIMEOUT) != pdTRUE)
@@ -307,7 +315,7 @@ static void tcp_server_task(void *pvParameters)
                 }
                 else
                 {
-                    ESP_LOGI(TAG, "Configuration package sent successfully");
+                    ESP_LOGD(TAG, "Configuration package sent successfully");
                 }
 
                 break;

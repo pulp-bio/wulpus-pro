@@ -514,9 +514,9 @@ class WulpusGuiSingleCh(widgets.VBox):
         while self.data_cnt < number_of_acq and self.acquisition_running:
             # Receive the data
             rf_arr, acq_nr, tx_rx_id = self.com_link.receive_data()
-            self.save_data_label.value = (
-                f"{np.array(rf_arr).shape}, {acq_nr}, {tx_rx_id}"
-            )
+            # self.save_data_label.value = (
+            #     f"{np.array(rf_arr).shape}, {acq_nr}, {tx_rx_id}"
+            # )
             self.log.debug(
                 f"Received data: {np.array(rf_arr).shape}, {acq_nr}, {tx_rx_id}"
             )
@@ -527,7 +527,7 @@ class WulpusGuiSingleCh(widgets.VBox):
                 and (acq_nr >= 0 and acq_nr < number_of_acq)
                 and (tx_rx_id >= 0 and tx_rx_id < self.uss_conf.num_txrx_configs)
             ):
-                self.log.debug("Data received")
+                # self.log.debug("Data received")
                 self.current_data = rf_arr
 
                 if (

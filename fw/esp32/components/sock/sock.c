@@ -5,6 +5,9 @@
 
 #define TAG "sock"
 
+#define SOCK_USE_MUTEX 0
+
+#if SOCK_USE_MUTEX
 #define SOCK_CHECK_FD(sock)                          \
     do                                               \
     {                                                \
@@ -29,8 +32,16 @@
     if (!(sock)->persist)     \
     xSemaphoreGive((sock)->mutex)
 
+#else
+#define SOCK_CHECK_FD(sock) (void)0
+#define SOCK_MUTEX_TAKE(sock) (void)0
+#define SOCK_MUTEX_GIVE(sock) (void)0
+#endif
+
 socket_instance_t sock_create(void)
 {
+    esp_log_level_set(TAG, LOG_LOCAL_LEVEL);
+
     ESP_LOGD(TAG, "Creating socket...");
 
     socket_instance_t sock = {
