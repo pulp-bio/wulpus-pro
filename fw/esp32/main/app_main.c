@@ -45,11 +45,7 @@
 
 static const char *TAG = "main";
 
-socket_instance_t response_socket = {
-    .fd = -1,
-    .addr = {0},
-    .addr_len = 0,
-};
+socket_instance_t response_socket;
 spi_device_handle_t spi = NULL;
 
 TaskHandle_t tcp_server_task_handle = NULL;
@@ -99,9 +95,6 @@ void app_main(void)
 #endif
 
     esp_log_level_set(TAG, LOG_LOCAL_LEVEL);
-
-    // Initialize LED moved to bsp component
-    bsp_update_led(STATUS_OFF);
 
     // Initialize provisioner and thus wifi
     ESP_ERROR_CHECK(provisioner_init());
@@ -189,8 +182,6 @@ void app_main(void)
     ESP_ERROR_CHECK(spi_bus_add_device(CONFIG_WP_SPI_INSTANCE - 1, &dev_cfg, &spi));
     ESP_ERROR_CHECK(gpio_hold_en(CONFIG_WP_SPI_CS));
 
-    bsp_update_led(STATUS_PROVISIONING);
-
     // Start provisioning
 #if CONFIG_WP_DOUBLE_RESET
     ESP_ERROR_CHECK(provisioner_start(reset_provisioning));
@@ -204,8 +195,6 @@ void app_main(void)
 
     // Start but suspend TWT
     provisioner_twt_setup();
-
-    bsp_update_led(STATUS_IDLE);
 
     // Start TCP server
     xTaskCreate(tcp_server_task, "tcp_server", CONFIG_WP_SERVER_STACK_SIZE, NULL, CONFIG_WP_SERVER_PRIORITY, &tcp_server_task_handle);
@@ -223,60 +212,32 @@ static void tcp_server_task(void *pvParameters)
     ESP_LOGI(TAG, "TCP server task started");
 
     uint8_t rx_buffer[CONFIG_WP_SERVER_RX_BUFFER_SIZE];
-    char addr_str[128];
-    int addr_family;
-    int ip_protocol;
 
-    // Set up listening socket
-    struct sockaddr_in dest_addr;
-    dest_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    dest_addr.sin_family = AF_INET;
-    dest_addr.sin_port = htons(CONFIG_WP_SOCKET_PORT);
-    addr_family = AF_INET;
-    ip_protocol = IPPROTO_IP;
-    inet_ntoa_r(dest_addr.sin_addr, addr_str, sizeof(addr_str) - 1);
-
-    int listen_sock = socket(addr_family, SOCK_STREAM, ip_protocol);
-    if (listen_sock < 0)
+    socket_instance_t listen_sock = sock_create();
+    if (listen_sock.mutex == NULL)
     {
-        ESP_LOGE(TAG, "Unable to create listening socket: %s", strerror(errno));
+        ESP_LOGE(TAG, "Failed to create listen socket");
         vTaskDelete(NULL);
         return;
     }
-    ESP_LOGI(TAG, "Listening socket created");
 
-    // Bind listening socket
-    int err = bind(listen_sock, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-    if (err != 0)
-    {
-        ESP_LOGE(TAG, "Socket unable to bind: %s", strerror(errno));
-        vTaskDelete(NULL);
-        return;
-    }
-    ESP_LOGI(TAG, "Listening socket bound, port %d", CONFIG_WP_SOCKET_PORT);
+    // Initialize and bind listening socket
+    ESP_ERROR_CHECK(sock_init(&listen_sock));
+    ESP_ERROR_CHECK(sock_listen(&listen_sock, INADDR_ANY, CONFIG_WP_SOCKET_PORT));
 
-    // Start listening
-    err = listen(listen_sock, 1);
-    if (err != 0)
-    {
-        ESP_LOGE(TAG, "Error occurred during listen: %s", strerror(errno));
-        vTaskDelete(NULL);
-        return;
-    }
-    ESP_LOGI(TAG, "Listening");
+    // Initialize response socket
+    ESP_ERROR_CHECK(sock_init(&response_socket));
 
+    esp_err_t err = ESP_OK;
     while (1)
     {
         // Accept a connection
-        response_socket.addr_len = sizeof(response_socket.addr);
-        response_socket.fd = accept(listen_sock, (struct sockaddr *)&response_socket.addr, (socklen_t *)&response_socket.addr_len);
-        if (response_socket.fd < 0)
+        err = sock_accept(&listen_sock, &response_socket);
+        if (err != ESP_OK)
         {
-            ESP_LOGE(TAG, "Unable to accept connection: %s", strerror(errno));
+            ESP_LOGE(TAG, "Failed to accept connection");
             continue;
         }
-
-        ESP_LOGI(TAG, "Socket accepted from %s:%d", inet_ntoa(response_socket.addr.sin_addr), ntohs(response_socket.addr.sin_port));
 
         provisioner_twt_suspend(1);
 
@@ -286,21 +247,14 @@ static void tcp_server_task(void *pvParameters)
         bool run = true;
         while (run)
         {
-            bsp_update_led(STATUS_TRANSMITTING);
-
             wulpus_command_header_t recv_header, resp_header;
 
             // Read data from the socket
-            int len = recv(response_socket.fd, (uint8_t *)&recv_header, HEADER_LEN, 0);
-            // Error occurred during receiving
-            if (len < 0)
+            size_t len = HEADER_LEN;
+            err = sock_recv(&response_socket, &recv_header, &len);
+            if (err != ESP_OK)
             {
-                ESP_LOGE(TAG, "recv failed: %s", strerror(errno));
-                continue;
-            }
-            else if (len == 0)
-            {
-                ESP_LOGW(TAG, "No header received");
+                ESP_LOGE(TAG, "Failed to receive header");
                 continue;
             }
             else if (len != HEADER_LEN)
@@ -320,16 +274,10 @@ static void tcp_server_task(void *pvParameters)
             resp_header = recv_header;
             resp_header.data_length = 0; // Set data length to 0 for the header response
 
-            if (xSemaphoreTake(tcp_port_mutex, TCP_PORT_MUTEX_TIMEOUT) != pdTRUE)
+            err = sock_send(&response_socket, &resp_header, HEADER_LEN);
+            if (err != ESP_OK)
             {
-                ESP_LOGE(TAG, "Failed to take TCP port mutex");
-                continue;
-            }
-            int err = send(response_socket.fd, (uint8_t *)&resp_header, HEADER_LEN, 0);
-            xSemaphoreGive(tcp_port_mutex);
-            if (err < 0)
-            {
-                ESP_LOGE(TAG, "Error occurred during sending: %s", strerror(errno));
+                ESP_LOGE(TAG, "Failed to send header response");
                 break;
             }
             ESP_LOGD(TAG, "Header echoed back");
@@ -350,21 +298,11 @@ static void tcp_server_task(void *pvParameters)
                 }
 
                 // Receive data
-                if (xSemaphoreTake(tcp_port_mutex, TCP_PORT_MUTEX_TIMEOUT) != pdTRUE)
+                len = recv_header.data_length;
+                err = sock_recv(&response_socket, command_data.data, &len);
+                if (err != ESP_OK)
                 {
-                    ESP_LOGE(TAG, "Failed to take TCP port mutex");
-                    continue;
-                }
-                len = recv(response_socket.fd, command_data.data, command_data.data_length, 0);
-                xSemaphoreGive(tcp_port_mutex);
-                if (len < 0)
-                {
-                    ESP_LOGE(TAG, "recv failed: %s", strerror(errno));
-                    break;
-                }
-                else if (len == 0)
-                {
-                    ESP_LOGW(TAG, "No data received");
+                    ESP_LOGE(TAG, "Failed to receive data");
                     break;
                 }
                 else if (len != recv_header.data_length)
@@ -418,25 +356,16 @@ static void tcp_server_task(void *pvParameters)
                 if (ret != ESP_OK)
                 {
                     ESP_LOGE(TAG, "Error occurred during SPI transmission: %s", esp_err_to_name(ret));
-                    bsp_update_led(STATUS_ERROR);
                 }
                 else
                 {
                     ESP_LOGI(TAG, "Configuration package sent successfully");
-                    bsp_update_led(STATUS_IDLE);
                 }
                 gpio_hold_en(CONFIG_WP_SPI_CS);
-
-                // // TODO: Check if this is correct/needed
-                // ESP_ERROR_CHECK(gpio_hold_dis(CONFIG_WP_GPIO_LINK_READY));
-                // ESP_ERROR_CHECK(gpio_set_level(CONFIG_WP_GPIO_LINK_READY, 0));
-                // ESP_ERROR_CHECK(gpio_hold_en(CONFIG_WP_GPIO_LINK_READY));
-                // ESP_LOGI(TAG, "Link ready signal reset");
 
                 break;
             case GET_DATA:
                 ESP_LOGW(TAG, "GET_DATA is not implemented");
-                bsp_update_led(STATUS_IDLE);
                 break;
             case PING:
                 ESP_LOGI(TAG, "Received ping command");
@@ -446,27 +375,12 @@ static void tcp_server_task(void *pvParameters)
                     .command = PONG,
                     .data_length = 4,
                 };
-                if (xSemaphoreTake(tcp_port_mutex, TCP_PORT_MUTEX_TIMEOUT) != pdTRUE)
+                err = sock_send(&response_socket, &response, HEADER_LEN);
+                if (err != ESP_OK)
                 {
-                    ESP_LOGE(TAG, "Failed to take TCP port mutex");
-                    continue;
-                }
-                int err = send(response_socket.fd, (uint8_t *)&response, HEADER_LEN, 0);
-                if (err < 0)
-                {
-                    ESP_LOGE(TAG, "Error occurred during sending header: %s", strerror(errno));
-                    bsp_update_led(STATUS_ERROR);
+                    ESP_LOGE(TAG, "Failed to send ping response");
                     break;
                 }
-                err = send(response_socket.fd, (uint8_t *)"pong", 4, 0);
-                xSemaphoreGive(tcp_port_mutex);
-                if (err < 0)
-                {
-                    ESP_LOGE(TAG, "Error occurred during sending data: %s", strerror(errno));
-                    bsp_update_led(STATUS_ERROR);
-                    break;
-                }
-                bsp_update_led(STATUS_IDLE);
                 break;
             case RESET:
                 ESP_LOGI(TAG, "Received reset command");
@@ -502,12 +416,15 @@ static void tcp_server_task(void *pvParameters)
         }
 
         // Close socket
-        if (response_socket.fd >= 0)
+        err = sock_close(&response_socket);
+        if (err != ESP_OK)
         {
-            close(response_socket.fd);
-            response_socket.fd = -1;
+            ESP_LOGE(TAG, "Failed to close socket");
         }
-        ESP_LOGI(TAG, "Socket closed");
+        else
+        {
+            ESP_LOGI(TAG, "Socket closed successfully");
+        }
 
         provisioner_twt_suspend(0);
     }
@@ -540,7 +457,6 @@ static void data_handler_task(void *pvParameters)
         {
             // Data is ready, handle it here
             ESP_LOGD(TAG, "Data ready signal received on GPIO %lu", io_num);
-            // bsp_update_led(STATUS_TRANSMITTING);
 
             // Give data ready semaphore
             xSemaphoreGive(data_ready_semaphore);
@@ -565,7 +481,6 @@ static void data_handler_task(void *pvParameters)
                 if (ret != ESP_OK)
                 {
                     ESP_LOGE(TAG, "Error occurred during SPI reception: %s", esp_err_to_name(ret));
-                    // bsp_update_led(STATUS_ERROR);
                     continue;
                 }
                 gpio_hold_en(CONFIG_WP_SPI_CS);
@@ -599,7 +514,6 @@ static void data_handler_task(void *pvParameters)
                 if (err < 0)
                 {
                     ESP_LOGE(TAG, "Error occurred during data: %s", strerror(errno));
-                    // bsp_update_led(STATUS_ERROR);
                     continue;
                 }
 
@@ -608,8 +522,6 @@ static void data_handler_task(void *pvParameters)
                 // elapsed_time = esp_timer_get_time() - current_time;
                 // ESP_LOGD(TAG, "Data sending took  %lu us", elapsed_time);
             }
-
-            // bsp_update_led(STATUS_IDLE);
         }
     }
 }
