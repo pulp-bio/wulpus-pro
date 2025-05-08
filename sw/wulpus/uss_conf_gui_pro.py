@@ -126,8 +126,9 @@ class WulpusProUssConfigGUI(widgets.VBox, WulpusProUssConfig):
         entries_acq.append(self.get_param('num_acqs').get_as_widget(self.num_acqs))
         entries_acq.append(self.get_param('meas_period').get_as_widget(self.meas_period))
         entries_acq.append(self.get_param('sampling_freq').get_as_widget(self.sampling_freq))
-        entries_acq.append(self.get_param('num_samples').get_as_widget(self.num_samples))
+        # entries_acq.append(self.get_param('num_samples').get_as_widget(self.num_samples))
         entries_acq.append(self.get_param('rx_gain').get_as_widget(self.rx_gain))
+        entries_acq.append(self.get_param('enable_env_det').get_as_widget(self.enable_env_det))
 
         entries_exc.append(widgets.HTML(value="<b>Excitation settings</b>"))
         # TODO: Add DutyCycle input here
@@ -146,7 +147,7 @@ class WulpusProUssConfigGUI(widgets.VBox, WulpusProUssConfig):
         entries_adv.append(self.get_param('vga_slope_code').get_as_widget(self.vga_slope_code))
 
         # Disable capture restart, capture timeout and number of samples (per index is sloppy, but works for now)
-        entries_acq[4].disabled = True      # num_samples
+        # entries_acq[4].disabled = True      # num_samples
 
         self.entries_left = entries_acq + entries_exc
         self.entries_right = entries_adv

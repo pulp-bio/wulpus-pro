@@ -76,6 +76,7 @@ class WulpusProUssConfig():
         capt_timeout (int): Capture timeout time in microseconds.
         vga_rc_prech_cyc (int): VGA Precharge time [cycles]
         vga_slope_code (int): Wiper code for gain slope []
+        enable_env_det (str): Enable envelope detection (0: Disabled, 1: Enabled)
     """
 
     def __init__(self,
@@ -99,7 +100,9 @@ class WulpusProUssConfig():
                  restart_capt=3000,
                  capt_timeout=3000,
                  vga_rc_prech_cyc=0,
-                 vga_slope_code=256):
+                 vga_slope_code=256,
+                 enable_env_det='Disabled',
+                 ):
         
         # check if sampling frequency is valid
         if sampling_freq not in USS_CAPTURE_ACQ_RATES:
@@ -132,6 +135,7 @@ class WulpusProUssConfig():
         self.capt_timeout       = int(capt_timeout)
         self.vga_rc_prech_cyc   = int(vga_rc_prech_cyc)
         self.vga_slope_code     = int(vga_slope_code)
+        self.enable_env_det     = str(enable_env_det)
 
         # check if configuration is valid
         self.convert_to_registers() # convert to register saveable values
@@ -160,6 +164,7 @@ class WulpusProUssConfig():
         self.capt_timeout_reg       = int(self.capt_timeout * us_to_ticks["capt_timeout"])
         self.vga_rc_prech_cyc_reg   = int(self.vga_rc_prech_cyc)
         self.vga_slope_code_reg     = int(self.vga_slope_code)
+        self.enable_env_det_reg     = 1 if self.enable_env_det == 'Enabled' else 0
 
 
     def calc_gain_curve(self):
@@ -212,6 +217,7 @@ class WulpusProUssConfig():
 
         # Write basic settings
         for param in configuration_package[0]:
+            print(param.config_name)
             value = getattr(self, param.config_name + "_reg")
             bytes_arr += param.get_as_bytes(value)
         
