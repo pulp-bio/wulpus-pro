@@ -16,6 +16,8 @@ typedef struct
 
     SemaphoreHandle_t mutex;
     TickType_t mutex_timeout;
+
+    bool persist;
 } socket_instance_t;
 
 socket_instance_t sock_create(void);

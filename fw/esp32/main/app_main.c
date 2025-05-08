@@ -247,69 +247,15 @@ static void tcp_server_task(void *pvParameters)
         bool run = true;
         while (run)
         {
-            wulpus_command_header_t recv_header, resp_header;
+            wulpus_command_header_t recv_header;
 
-            // Read data from the socket
-            size_t len = HEADER_LEN;
-            err = sock_recv(&response_socket, &recv_header, &len);
+            // Receive command from the socket (blocking)
+            size_t data_len = sizeof(rx_buffer);
+            err = command_recv(&response_socket, &recv_header, rx_buffer, &data_len);
             if (err != ESP_OK)
             {
                 ESP_LOGE(TAG, "Failed to receive header");
                 continue;
-            }
-            else if (len != HEADER_LEN)
-            {
-                ESP_LOGW(TAG, "Header length mismatch: expected %d, got %d", HEADER_LEN, len);
-                continue;
-            }
-
-            // Check first 6 bytes: "wulpus"
-            if (strncmp(recv_header.magic, "wulpus", 6) != 0)
-            {
-                ESP_LOGW(TAG, "Invalid magic: Expected 'wulpus'");
-                break;
-            }
-
-            // Send back header as response
-            resp_header = recv_header;
-            resp_header.data_length = 0; // Set data length to 0 for the header response
-
-            err = sock_send(&response_socket, &resp_header, HEADER_LEN);
-            if (err != ESP_OK)
-            {
-                ESP_LOGE(TAG, "Failed to send header response");
-                break;
-            }
-            ESP_LOGD(TAG, "Header echoed back");
-
-            ESP_LOGI(TAG, "Command: %d, Data length: %d", recv_header.command, recv_header.data_length);
-
-            wulpus_command_data_t command_data = {
-                .data = rx_buffer,
-                .data_length = recv_header.data_length,
-            };
-
-            if (recv_header.data_length != 0)
-            {
-                if (recv_header.data_length > CONFIG_WP_SERVER_RX_BUFFER_SIZE)
-                {
-                    ESP_LOGE(TAG, "Data length exceeds buffer size: %d > %d", recv_header.data_length, CONFIG_WP_SERVER_RX_BUFFER_SIZE);
-                    break;
-                }
-
-                // Receive data
-                len = recv_header.data_length;
-                err = sock_recv(&response_socket, command_data.data, &len);
-                if (err != ESP_OK)
-                {
-                    ESP_LOGE(TAG, "Failed to receive data");
-                    break;
-                }
-                else if (len != recv_header.data_length)
-                {
-                    ESP_LOGW(TAG, "Data length mismatch: expected %d, got %d", recv_header.data_length, len);
-                    break;
-                }
             }
 
             switch (recv_header.command)
@@ -331,7 +277,7 @@ static void tcp_server_task(void *pvParameters)
                 }
 
                 uint8_t spi_tx_buffer[804] = {0};
-                memcpy(spi_tx_buffer, command_data.data, recv_header.data_length);
+                memcpy(spi_tx_buffer, rx_buffer, data_len);
 
                 ESP_LOGD(TAG, "Configuration package (%u bytes):", recv_header.data_length);
                 for (size_t i = 0; i < recv_header.data_length; i++)
@@ -349,19 +295,20 @@ static void tcp_server_task(void *pvParameters)
                 if (xSemaphoreTake(spi_mutex, SPI_MUTEX_TIMEOUT) != pdTRUE)
                 {
                     ESP_LOGE(TAG, "Failed to take SPI mutex");
-                    continue;
+                    break;
                 }
                 esp_err_t ret = spi_device_transmit(spi, &tx);
                 xSemaphoreGive(spi_mutex);
+                gpio_hold_en(CONFIG_WP_SPI_CS);
                 if (ret != ESP_OK)
                 {
                     ESP_LOGE(TAG, "Error occurred during SPI transmission: %s", esp_err_to_name(ret));
+                    break;
                 }
                 else
                 {
                     ESP_LOGI(TAG, "Configuration package sent successfully");
                 }
-                gpio_hold_en(CONFIG_WP_SPI_CS);
 
                 break;
             case GET_DATA:
@@ -375,7 +322,7 @@ static void tcp_server_task(void *pvParameters)
                     .command = PONG,
                     .data_length = 4,
                 };
-                err = sock_send(&response_socket, &response, HEADER_LEN);
+                err = command_send(&response_socket, &response, "pong", 4);
                 if (err != ESP_OK)
                 {
                     ESP_LOGE(TAG, "Failed to send ping response");
@@ -412,7 +359,8 @@ static void tcp_server_task(void *pvParameters)
                 transmits_enabled = false;
                 break;
             }
-            ESP_LOGI(TAG, "Command %d processed", recv_header.command);
+
+            ESP_LOGI(TAG, "Command %s processed", command_name(recv_header.command));
         }
 
         // Close socket
@@ -466,8 +414,8 @@ static void data_handler_task(void *pvParameters)
             // Data: <data>
             if (transmits_enabled & (response_socket.fd >= 0))
             {
-                // Get current time
-                uint32_t current_time = esp_timer_get_time();
+                // // Get current time
+                // uint32_t current_time = esp_timer_get_time();
 
                 // Read data from the device
                 gpio_hold_dis(CONFIG_WP_SPI_CS);
@@ -478,12 +426,12 @@ static void data_handler_task(void *pvParameters)
                 }
                 esp_err_t ret = spi_device_transmit(spi, &rx);
                 xSemaphoreGive(spi_mutex);
+                gpio_hold_en(CONFIG_WP_SPI_CS);
                 if (ret != ESP_OK)
                 {
                     ESP_LOGE(TAG, "Error occurred during SPI reception: %s", esp_err_to_name(ret));
                     continue;
                 }
-                gpio_hold_en(CONFIG_WP_SPI_CS);
 
                 // uint32_t elapsed_time = esp_timer_get_time() - current_time;
                 // ESP_LOGD(TAG, "SPI reception took %lu us", elapsed_time);
@@ -504,16 +452,10 @@ static void data_handler_task(void *pvParameters)
                 // setsockopt(response_socket.fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
 
                 // Send header and data
-                if (xSemaphoreTake(tcp_port_mutex, TCP_PORT_MUTEX_TIMEOUT) != pdTRUE)
+                ret = sock_send(&response_socket, spi_rx_buffer, CONFIG_WP_DATA_RX_LENGTH + HEADER_LEN);
+                if (ret != ESP_OK)
                 {
-                    ESP_LOGE(TAG, "Failed to take TCP port mutex");
-                    continue;
-                }
-                int err = send(response_socket.fd, spi_rx_buffer, CONFIG_WP_DATA_RX_LENGTH + HEADER_LEN, 0);
-                xSemaphoreGive(tcp_port_mutex);
-                if (err < 0)
-                {
-                    ESP_LOGE(TAG, "Error occurred during data: %s", strerror(errno));
+                    ESP_LOGE(TAG, "Failed to send data: %s", esp_err_to_name(ret));
                     continue;
                 }
 

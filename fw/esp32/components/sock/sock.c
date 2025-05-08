@@ -25,7 +25,9 @@
         }                                                                   \
     } while (0)
 
-#define SOCK_MUTEX_GIVE(sock) xSemaphoreGive((sock)->mutex)
+#define SOCK_MUTEX_GIVE(sock) \
+    if (!(sock)->persist)     \
+    xSemaphoreGive((sock)->mutex)
 
 socket_instance_t sock_create(void)
 {
@@ -37,6 +39,7 @@ socket_instance_t sock_create(void)
         .addr_len = 0,
         .mutex = xSemaphoreCreateMutex(),
         .mutex_timeout = pdMS_TO_TICKS(1000),
+        .persist = false,
     };
 
     if (sock.mutex == NULL)
@@ -145,7 +148,7 @@ esp_err_t sock_recv(socket_instance_t *sock, void *buffer, size_t *length)
     }
 
     ESP_LOGD(TAG, "Received data (%d bytes)", len);
-    length = len;
+    *length = len;
     return ESP_OK;
 }
 
