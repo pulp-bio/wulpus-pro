@@ -52,7 +52,7 @@ class WulpusScanner:
     def browse(self, timeout):
         zeroconf = Zeroconf()
         self.listener = _Listener(self.service)
-        browser = ServiceBrowser(zeroconf, self.service, self.listener)
+        ServiceBrowser(zeroconf, self.service, self.listener)
 
         while not self.listener.found and timeout > 0:
             sleep(0.1)

@@ -11,3 +11,6 @@ dependencies = [
     "scipy==1.9.3",
     "zeroconf==0.146.5",
 ]
+
+[tool.ruff]
+exclude = ["wulpus/config_package.py", "wulpus/config_package_pro.py"]
