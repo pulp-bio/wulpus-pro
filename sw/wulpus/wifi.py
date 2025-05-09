@@ -356,64 +356,81 @@ class WulpusWiFi:
 
         return data["rf_arr"], data["acq_nr"], data["tx_rx_id"]
 
-    def receive_data(self):
+    def receive_data(self, timeout: float = 5.0):
         """
-        Receive a data package from the device.
+        Receive a single GET_DATA packet, handling partial recv() and stream
+        re-synchronization. Leaves any extra bytes in self.backlog.
         """
         self.log.info("Receiving data package")
+        if self.sock is None:
+            self.log.error("Device not open")
+            raise ValueError("Device not open.")
 
-        if len(self.backlog) > 0:
-            self.log.debug("Backlog has data")
-            # Check if there is a complete package in the backlog
-            header = self._decode_command(self.backlog[:9])
-            self.log.debug(f"Backlog header: {header}")
-            if len(self.backlog) >= header["length"] + 9:
-                self.log.debug("Backlog has complete package")
-                # Get data of length header["length"]
-                data = self.backlog[9 : header["length"] + 9]
-                self.backlog = self.backlog[header["length"] + 9 :]
+        start = time.time()
+        buf = bytearray(self.backlog or b"")
 
-                return self._get_rf_data_and_info__(data)
-            else:
-                self.log.warning(
-                    "Backlog does not have complete package, discarding it"
-                )
-                # No complete package in backlog, receive new data
-                self.backlog = b""
-
-        start_time = time.time()
-
-        while time.time() - start_time < 5:
+        while time.time() - start < timeout:
+            # Try to read more from the socket
             try:
-                header, data = self.receive_command(strict_length=False)
+                chunk = self.sock.recv(4096)
+                if not chunk:
+                    # peer closed connection or no more data
+                    break
+                buf.extend(chunk)
             except socket.timeout:
-                self.log.warning("Timeout while receiving data")
-                return None
+                # no new data right now
+                pass
 
-            if len(data) != header["length"]:
-                self.log.warning(
-                    f"Pushing incomplete data to backlog. Expected {header['length']}, got {len(data)}"
-                )
-                data += self.sock.recv(header["length"] - len(data))
+            # Try to extract as many full packets as we can
+            while True:
+                if len(buf) < 9:
+                    # not even a full header
+                    break
 
-            # Check command
-            if header["command"] != WulpusCommand.GET_DATA:
-                self.log.warning(
-                    f"Invalid command. Expected {WulpusCommand.GET_DATA}, got {header['command']}"
-                )
-                return None
+                # Must compare to bytes!
+                if buf[0:6] != b"wulpus":
+                    # drop until the next possible header
+                    idx = buf.find(b"wulpus", 1)
+                    if idx == -1:
+                        buf.clear()
+                        break
+                    del buf[:idx]
+                    continue
 
-            break
+                # Decode header once
+                try:
+                    hdr = self._decode_command(bytes(buf[:9]))
+                except ValueError:
+                    # malformed header magic or length
+                    buf.pop(0)
+                    continue
 
-        # Check if there is magic in the data
-        if b"wulpus" in data:
-            # Remove magic from data
-            self.backlog += b"wulpus" + data.split(b"wulpus")[1]
-            data = data.split(b"wulpus")[0]
+                total_len = 9 + hdr["length"]
+                if len(buf) < total_len:
+                    # still waiting for the full packet
+                    break
 
-        # Unpack data
-        self.log.debug("Decoding data")
-        return self._get_rf_data_and_info__(data)
+                # We have a full packet in buf[0:total_len]
+                packet = bytes(buf[:total_len])
+                del buf[:total_len]
+
+                # Only process GET_DATA
+                if hdr["command"] != WulpusCommand.GET_DATA:
+                    self.log.debug(f"Ignoring {hdr['command']}")
+                    continue
+
+                # Extract the RF payload
+                rf_arr, acq_nr, tx_rx_id = self._get_rf_data_and_info__(packet[9:])
+                # Save leftover for next call
+                self.backlog = bytes(buf)
+                return rf_arr, acq_nr, tx_rx_id
+
+            # end inner-while: not enough for a packet, loop recv()
+
+        # Timeout or socket closed
+        self.backlog = bytes(buf)
+        self.log.warning("Timeout or socket closed before full packet")
+        return None
 
     def ping(self):
         """
