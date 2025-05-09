@@ -182,6 +182,8 @@ class WulpusProUssConfig():
         # Init gain array (+ add PGA)
         self.gain_curve_db[:] = vga_volts_to_gain_db(pregain_v) + self.rx_gain
 
+        print("Start gain: ", self.gain_curve_db[0]," dB")
+
         # Check if we operate in fixed gain mode
         if (self.vga_slope_code >= VGA_SLOPE_CODE_FIXED_GAIN_MODE):
             print("Fixed Gain Mode")
