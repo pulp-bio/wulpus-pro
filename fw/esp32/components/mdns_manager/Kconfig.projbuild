@@ -1,0 +1,9 @@
+menu "mdns_manager Configuration"
+
+    config MDNS_MANAGER_POSTPENDMAC
+        bool "Postpend MAC address to hostname"
+        default n
+        help
+          Postpend MAC address to hostname
+
+endmenu

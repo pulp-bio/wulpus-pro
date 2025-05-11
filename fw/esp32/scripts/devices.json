@@ -1,0 +1,10 @@
+{
+    "devices": [
+        {
+            "name": "wulpus._wulpus._udp.local.",
+            "server": "wulpus.local",
+            "ip": "192.168.1.102",
+            "port": 2121
+        }
+    ]
+}

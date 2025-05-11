@@ -1,0 +1,25 @@
+menu "BSP settings"
+
+    config BSP_INIT_LED
+        bool "Initialize the boards LED"
+        default y
+        help
+          This option controls whether the LED is initialized by the BSP.
+
+    config BSP_DEFAULT_LED_BRIGHTNESS
+        
+        int "Default LED brightness"
+        default 10
+        range 0 255
+        help
+          This is the default brightness for the LEDs.  It can be
+          overridden by passing a brightness value in the `bsp_set_led()` call.
+
+    config BSP_LED_PIN
+
+        int "LED pin"
+        default 48
+        help
+          This is the pin that the LED is connected to.
+
+endmenu
