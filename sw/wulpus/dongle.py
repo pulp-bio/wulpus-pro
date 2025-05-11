@@ -152,3 +152,9 @@ class WulpusDongle:
             return self.__get_rf_data_and_info__(response)
         else:
             return None
+
+    def toggle_rx(self, state: bool):
+        """
+        Toggle RX state (Not implemented since not needed here).
+        """
+        return True
