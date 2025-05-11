@@ -40,7 +40,7 @@ from wulpus.wifi import WulpusWiFi
 wifi = WulpusWiFi()
 
 # Setup the GUI (uss_conf is already setup and configured)
-gui = WulpusGuiSingleCh(dongle, uss_conf)
+gui = WulpusGuiSingleCh(wifi, uss_conf)
 
 display(gui)
 ```
