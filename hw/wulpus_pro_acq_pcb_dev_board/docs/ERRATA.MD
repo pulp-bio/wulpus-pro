@@ -10,6 +10,10 @@
 
 - Transducer connector J1 and J2 uses the smallest available connector DF40C-40DS-0.4V(51) resulting in 1.5 mm stacking height. The height is the sam as HV2707 heigh which is located in betwenn the connectors on the PCB. The default mounted connectors should be higher to allow for a margin.
 
+
+# Changes to the reference design
+- WULPUS PRO 1 board has 220pf instead of 1 nF mounted on footprint of C12 to match 5 MHz Vermon transducer.
+
 # Improvements
 
 - Preferably OFFSN pin of the AD8338 should be tied to capacitor to provide additional high pass filter to mitigate MSP430 receive artifacts.
