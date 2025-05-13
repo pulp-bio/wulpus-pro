@@ -555,6 +555,7 @@ class WulpusGuiSingleCh(widgets.VBox):
             self.log.debug(
                 f"Received data: {np.array(rf_arr).shape}, {acq_nr}, {tx_rx_id}"
             )
+            self.log.debug(f"n_acqs: {number_of_acq}, num_trx_conf: {self.uss_conf.num_txrx_configs}")
 
             # For now, we just ignore invalid data
             if (
@@ -562,7 +563,7 @@ class WulpusGuiSingleCh(widgets.VBox):
                 and (acq_nr >= 0 and acq_nr < number_of_acq)
                 and (tx_rx_id >= 0 and tx_rx_id < self.uss_conf.num_txrx_configs)
             ):
-                # self.log.debug("Data received")
+                self.log.debug("Data received")
                 self.current_data = rf_arr
 
                 if (

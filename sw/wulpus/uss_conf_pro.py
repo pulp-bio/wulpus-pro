@@ -31,7 +31,7 @@ from wulpus.config_package_pro import (
 START_BYTE_CONF_PACK = 250
 START_BYTE_RESTART = 251
 # Maximum length of the configuration package
-PACKAGE_LEN = 73
+PACKAGE_LEN = 103
 
 # VGA and Digipot Constants
 VGA_RC_SER_RES = 2.7e3
