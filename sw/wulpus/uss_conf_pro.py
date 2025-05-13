@@ -31,7 +31,7 @@ from wulpus.config_package_pro import (
 START_BYTE_CONF_PACK = 250
 START_BYTE_RESTART = 251
 # Maximum length of the configuration package
-PACKAGE_LEN = 103
+PACKAGE_LEN = 105
 
 # VGA and Digipot Constants
 VGA_RC_SER_RES = 2.7e3
@@ -242,6 +242,8 @@ class WulpusProUssConfig:
 
     def get_conf_package(self):
         # Start byte fixed
+        print("Getting configuration package")
+
         bytes_arr = np.array([START_BYTE_CONF_PACK]).astype("<u1").tobytes()
 
         # Make sure the values are converted to register saveable values
@@ -251,10 +253,13 @@ class WulpusProUssConfig:
         for param in configuration_package[0]:
             print(param.config_name)
             value = getattr(self, param.config_name + "_reg")
+            print(param.get_as_bytes(value))
             bytes_arr += param.get_as_bytes(value)
 
         # Write TX and RX configurations
         for i in range(self.num_txrx_configs):
+            print(f"TX Config {i}:\t0b{self.tx_configs[i]:016b}")
+            print(f"RX Config {i}:\t0b{self.rx_configs[i]:016b}")
             bytes_arr += self.tx_configs[i].astype("<u2").tobytes()
             bytes_arr += self.rx_configs[i].astype("<u2").tobytes()
 
@@ -266,6 +271,8 @@ class WulpusProUssConfig:
         # Add zeros to match the expected package legth if needed
         if len(bytes_arr) < PACKAGE_LEN:
             bytes_arr += np.zeros(PACKAGE_LEN - len(bytes_arr)).astype("<u1").tobytes()
+
+        print(f"Package length: {len(bytes_arr)}")
 
         # Debug print the package
         # for byte in bytes_arr:
