@@ -85,7 +85,11 @@ static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
 
 // Maximum size of the MSP config in bytes
 // According to the Config description
+<<<<<<< HEAD
 #define READ_SIZE               103
+=======
+#define READ_SIZE               105
+>>>>>>> parent of f0e9ada (Merge branch 'feature/polycmuts_meas' into bug/16channels)
 
 
 static char m_rx_buffer[READ_SIZE];
