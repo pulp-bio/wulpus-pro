@@ -347,7 +347,7 @@ class WulpusGuiSingleCh(widgets.VBox):
         meas_time = LINE_N_SAMPLES / self.uss_conf.sampling_freq
         meas_depth = meas_time * V_TISSUE * 1000 / 2
         # self.bmode_image.set_extent((LOWER_BOUNDS_MM, meas_depth, 0.5, 7.5))
-        self.bmode_image.set_extent((0, meas_depth, 0.5, 7.5))
+        self.bmode_image.set_extent((0, meas_depth, 0.5, 15.5))
 
     # Callbacks
 
