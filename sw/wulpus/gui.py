@@ -347,6 +347,8 @@ class WulpusGuiSingleCh(widgets.VBox):
         meas_time = LINE_N_SAMPLES / self.uss_conf.sampling_freq
         meas_depth = meas_time * V_TISSUE * 1000 / 2
         # self.bmode_image.set_extent((LOWER_BOUNDS_MM, meas_depth, 0.5, 7.5))
+        # Subtracting 0.5 ensures the extent aligns with the center of the first and last channels,
+        # which is a common adjustment for half-pixel offsets in plotting.
         self.bmode_image.set_extent((0, meas_depth, 0.5, self.uss_conf.num_txrx_configs - 0.5))
         self.ax.set_yticks(np.arange(0, self.uss_conf.num_txrx_configs, 1))
 
