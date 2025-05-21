@@ -31,7 +31,7 @@ from wulpus.config_package_pro import (
 START_BYTE_CONF_PACK = 250
 START_BYTE_RESTART = 251
 # Maximum length of the configuration package
-PACKAGE_LEN = 73
+PACKAGE_LEN = 105
 
 # VGA and Digipot Constants
 VGA_RC_SER_RES = 2.7e3
@@ -207,8 +207,6 @@ class WulpusProUssConfig:
         # Init gain array (+ add PGA)
         self.gain_curve_db[:] = vga_volts_to_gain_db(pregain_v) + self.rx_gain
 
-        print("Start gain: ", self.gain_curve_db[0]," dB")
-
         # Check if we operate in fixed gain mode
         if self.vga_slope_code >= VGA_SLOPE_CODE_FIXED_GAIN_MODE:
             print("Fixed Gain Mode")
@@ -251,7 +249,6 @@ class WulpusProUssConfig:
 
         # Write basic settings
         for param in configuration_package[0]:
-            print(param.config_name)
             value = getattr(self, param.config_name + "_reg")
             bytes_arr += param.get_as_bytes(value)
 

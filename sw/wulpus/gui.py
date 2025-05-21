@@ -76,7 +76,7 @@ class WulpusGuiSingleCh(widgets.VBox):
         self.data_arr = np.zeros(
             (self.com_link.acq_length, uss_conf.num_acqs), dtype="<i2"
         )
-        self.data_arr_bmode = np.zeros((8, self.com_link.acq_length), dtype="<i2")
+        self.data_arr_bmode = np.zeros((uss_conf.num_txrx_configs, self.com_link.acq_length), dtype="<i2")
         self.acq_num_arr = np.zeros(uss_conf.num_acqs, dtype="<u2")
         self.tx_rx_id_arr = np.zeros(uss_conf.num_acqs, dtype=np.uint8)
 
@@ -336,7 +336,7 @@ class WulpusGuiSingleCh(widgets.VBox):
     def setup_bmode_plot(self):
         self.ax.clear()
 
-        self.bmode_image = self.ax.imshow(np.zeros((8, LINE_N_SAMPLES)), aspect="auto")
+        self.bmode_image = self.ax.imshow(np.zeros((self.uss_conf.num_txrx_configs, LINE_N_SAMPLES)), aspect="auto")
 
         self.ax.set_xlabel("Depth (mm)")
         self.ax.set_ylabel("Channel number")
@@ -347,7 +347,10 @@ class WulpusGuiSingleCh(widgets.VBox):
         meas_time = LINE_N_SAMPLES / self.uss_conf.sampling_freq
         meas_depth = meas_time * V_TISSUE * 1000 / 2
         # self.bmode_image.set_extent((LOWER_BOUNDS_MM, meas_depth, 0.5, 7.5))
-        self.bmode_image.set_extent((0, meas_depth, 0.5, 7.5))
+        # Subtracting 0.5 ensures the extent aligns with the center of the first and last channels,
+        # which is a common adjustment for half-pixel offsets in plotting.
+        self.bmode_image.set_extent((0, meas_depth, 0.5, self.uss_conf.num_txrx_configs - 0.5))
+        self.ax.set_yticks(np.arange(0, self.uss_conf.num_txrx_configs, 1))
 
     # Callbacks
 
