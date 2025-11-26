@@ -1,6 +1,5 @@
 from time import sleep
 from dataclasses import dataclass
-import threading
 
 from zeroconf import ServiceBrowser, ServiceListener, Zeroconf
 
@@ -22,7 +21,7 @@ class _Listener(ServiceListener):
 
     def add_service(self, zeroconf, type, name):
         info = zeroconf.get_service_info(type, name)
-        # print(info)
+        print(info)
         self.found.append(info)
 
     def update_service(self, zeroconf, type, name):
@@ -49,30 +48,21 @@ class WulpusScanner:
         self.found = []
         self.devices = []
 
-    def browse(self, timeout):
+    def find(self, timeout=5):
         zeroconf = Zeroconf()
-        self.listener = _Listener(self.service)
-        ServiceBrowser(zeroconf, self.service, self.listener)
+        listener = _Listener(self.service)
+        browser = ServiceBrowser(zeroconf, self.service, listener)
 
-        while not self.listener.found and timeout > 0:
+        while not listener.found and timeout > 0:
             sleep(0.1)
             timeout -= 0.1
         zeroconf.close()
 
-    def find(self, timeout=5):
-        thread = threading.Thread(target=self.browse, args=(timeout,))
-        thread.start()
-        thread.join(timeout)
-        thread.join()
-        if thread.is_alive():
-            print("Timeout reached, stopping the scan")
-            thread.join()
-
-        if not self.listener.found:
+        if not listener.found:
             print(f"Could not find service '{self.service}'")
             return []
 
-        self.found = self.listener.found
+        self.found = listener.found
 
         self.devices = []
         print(f"Found {len(self.found)} devices")
@@ -88,3 +78,10 @@ class WulpusScanner:
             )
 
         return self.devices
+
+
+if __name__ == "__main__":
+    scanner = WulpusScanner()
+    devices = scanner.find()
+    for device in devices:
+        print(device)

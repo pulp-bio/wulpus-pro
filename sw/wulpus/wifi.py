@@ -3,10 +3,11 @@ import struct
 import logging
 from enum import IntEnum
 import time
+import json
 
 import numpy as np
 
-from .scanner import WulpusScanner
+from .scanner import WulpusScanner, WulpusNetworkDevice
 
 
 # Grab the logger you use in this file (e.g. “WiFi” in your __init__)
@@ -48,9 +49,7 @@ class WulpusCommand(IntEnum):
 
 
 class WulpusWiFi:
-    def __init__(
-        self, service_name: str = "wulpus", service_type: str = "tcp", port: int = 2121
-    ):
+    def __init__(self, port: int = 2121):
         """
         Constructor.
 
@@ -65,14 +64,9 @@ class WulpusWiFi:
         """
         self.log = wifi_logger
 
-        self.service_name = service_name
-        self.service_type = service_type
         self.port = port
-        self.log.info(
-            f"Initializing WulpusWiFi with service name: {service_name}.{service_type}:{port}"
-        )
 
-        self.scanner = WulpusScanner(service_name, service_type)
+        self.scanner = WulpusScanner()
 
         self.device = None
         self.sock = None
@@ -89,7 +83,20 @@ class WulpusWiFi:
         """
         self.log.info("Getting available devices")
 
-        result = self.scanner.find()
+        # result = self.scanner.find()
+        with open("devices.json", "r") as f:
+            data = json.load(f)
+
+        result = []
+        for device in data.get("devices", []):
+            result.append(
+                WulpusNetworkDevice(
+                    name=device["name"],
+                    server=device["server"],
+                    ip=device["ip"],
+                    port=device["port"],
+                )
+            )
 
         self.log.info(f"Found {len(result)} devices")
         for device in result:
@@ -471,3 +478,10 @@ class WulpusWiFi:
 
         self.log.debug("Done toggling RX state")
         return True
+
+
+if __name__ == "__main__":
+    wifi = WulpusWiFi()
+    devices = wifi.get_available()
+    for device in devices:
+        print(device)
