@@ -1,0 +1,14 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "wulpus_msp430_firmware",
+            "type": "ccs-debug",
+            "request": "launch",
+            "projectInfo": {
+                "name": "wulpus_msp430_firmware",
+                "resourceId": "/wulpus_msp430_firmware"
+            }
+        }
+    ]
+}

@@ -264,6 +264,10 @@ static void usAcquisitionLoop(void)
             // Switch HV pulser from HiZ to active state
             enableHvPulser();
 
+            // // EXPERIMENTAL: Only enable RX permanently
+            // hvMuxConfTx(msp_config.rxConfigs[tx_rx_id]);
+            // hvMuxIgnoreNxtLatchEvt();
+
             // Trigger ultrasound acquisition
             no_error = triggerUsAcq();
             if (no_error == false)
