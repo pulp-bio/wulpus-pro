@@ -586,8 +586,7 @@ CONFIG_PARTITION_TABLE_MD5=y
 #
 # Power Management
 #
-CONFIG_WP_ENABLE_PM=y
-CONFIG_WP_PM_MIN_FREQUENCY=10
+# CONFIG_WP_ENABLE_PM is not set
 # end of Power Management
 
 #

@@ -113,15 +113,15 @@ void app_main(void)
     };
     ESP_ERROR_CHECK(gpio_config(&gpio_cfg));
     ESP_ERROR_CHECK(gpio_set_level(CONFIG_WP_GPIO_LINK_READY, 0));
-    ESP_ERROR_CHECK(gpio_sleep_sel_dis(CONFIG_WP_GPIO_LINK_READY));
+    // ESP_ERROR_CHECK(gpio_sleep_sel_dis(CONFIG_WP_GPIO_LINK_READY));
 
     gpio_cfg.intr_type = GPIO_INTR_POSEDGE;
     gpio_cfg.mode = GPIO_MODE_INPUT;
     // gpio_cfg.pull_down_en = GPIO_PULLDOWN_ENABLE;
     gpio_cfg.pin_bit_mask = (1ULL << CONFIG_WP_GPIO_DATA_READY);
     ESP_ERROR_CHECK(gpio_config(&gpio_cfg));
-    ESP_ERROR_CHECK(gpio_sleep_set_direction(CONFIG_WP_GPIO_DATA_READY, GPIO_MODE_INPUT));
-    ESP_ERROR_CHECK(gpio_sleep_set_pull_mode(CONFIG_WP_GPIO_DATA_READY, GPIO_FLOATING));
+    // ESP_ERROR_CHECK(gpio_sleep_set_direction(CONFIG_WP_GPIO_DATA_READY, GPIO_MODE_INPUT));
+    // ESP_ERROR_CHECK(gpio_sleep_set_pull_mode(CONFIG_WP_GPIO_DATA_READY, GPIO_FLOATING));
 
     // Create semaphore
     gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
@@ -183,17 +183,17 @@ void app_main(void)
     ESP_ERROR_CHECK(spi_bus_initialize(CONFIG_WP_SPI_INSTANCE - 1, &spi_cfg, SPI_DMA_CH_AUTO));
     ESP_ERROR_CHECK(spi_bus_add_device(CONFIG_WP_SPI_INSTANCE - 1, &dev_cfg, &spi));
 
-    ESP_ERROR_CHECK(gpio_sleep_set_direction(CONFIG_WP_SPI_CLK, GPIO_MODE_OUTPUT));
-    ESP_ERROR_CHECK(gpio_sleep_set_pull_mode(CONFIG_WP_SPI_CLK, GPIO_PULLDOWN_ONLY));
+    // ESP_ERROR_CHECK(gpio_sleep_set_direction(CONFIG_WP_SPI_CLK, GPIO_MODE_OUTPUT));
+    // ESP_ERROR_CHECK(gpio_sleep_set_pull_mode(CONFIG_WP_SPI_CLK, GPIO_PULLDOWN_ONLY));
 
-    ESP_ERROR_CHECK(gpio_sleep_set_direction(CONFIG_WP_SPI_MOSI, GPIO_MODE_OUTPUT));
-    ESP_ERROR_CHECK(gpio_sleep_set_pull_mode(CONFIG_WP_SPI_MOSI, GPIO_PULLDOWN_ONLY));
+    // ESP_ERROR_CHECK(gpio_sleep_set_direction(CONFIG_WP_SPI_MOSI, GPIO_MODE_OUTPUT));
+    // ESP_ERROR_CHECK(gpio_sleep_set_pull_mode(CONFIG_WP_SPI_MOSI, GPIO_PULLDOWN_ONLY));
 
-    ESP_ERROR_CHECK(gpio_sleep_set_direction(CONFIG_WP_SPI_MISO, GPIO_MODE_INPUT));
-    ESP_ERROR_CHECK(gpio_sleep_set_pull_mode(CONFIG_WP_SPI_MISO, GPIO_FLOATING));
+    // ESP_ERROR_CHECK(gpio_sleep_set_direction(CONFIG_WP_SPI_MISO, GPIO_MODE_INPUT));
+    // ESP_ERROR_CHECK(gpio_sleep_set_pull_mode(CONFIG_WP_SPI_MISO, GPIO_FLOATING));
 
-    ESP_ERROR_CHECK(gpio_sleep_set_direction(CONFIG_WP_SPI_CS, GPIO_MODE_OUTPUT));
-    ESP_ERROR_CHECK(gpio_sleep_set_pull_mode(CONFIG_WP_SPI_CS, GPIO_PULLUP_ONLY));
+    // ESP_ERROR_CHECK(gpio_sleep_set_direction(CONFIG_WP_SPI_CS, GPIO_MODE_OUTPUT));
+    // ESP_ERROR_CHECK(gpio_sleep_set_pull_mode(CONFIG_WP_SPI_CS, GPIO_PULLUP_ONLY));
 
     // Start provisioning
 #if CONFIG_WP_DOUBLE_RESET
@@ -431,8 +431,8 @@ static void data_handler_task(void *pvParameters)
             // Data: <data>
             if (transmits_enabled & (response_socket.fd >= 0))
             {
-                // // Get current time
-                // uint32_t current_time = esp_timer_get_time();
+                // Get current time
+                uint32_t current_time = esp_timer_get_time();
 
                 // Read data from the device
                 if (xSemaphoreTake(spi_mutex, SPI_MUTEX_TIMEOUT) != pdTRUE)
@@ -448,11 +448,11 @@ static void data_handler_task(void *pvParameters)
                     continue;
                 }
 
-                // uint32_t elapsed_time = esp_timer_get_time() - current_time;
-                // ESP_LOGD(TAG, "SPI reception took %lu us", elapsed_time);
+                uint32_t elapsed_time = esp_timer_get_time() - current_time;
+                ESP_LOGI(TAG, "SPI reception took %lu us", elapsed_time);
 
-                // ESP_LOGD(TAG, "TRX ID: %u", *(uint8_t *)(spi_rx_buffer + HEADER_LEN + 1));
-                // ESP_LOGD(TAG, "ACQ NR: %u", *(uint16_t *)(spi_rx_buffer + HEADER_LEN + 2));
+                ESP_LOGI(TAG, "TRX ID: %u", *(uint8_t *)(spi_rx_buffer + HEADER_LEN + 1));
+                ESP_LOGI(TAG, "ACQ NR: %u", *(uint16_t *)(spi_rx_buffer + HEADER_LEN + 2));
 
                 // uint32_t data_sum = 0;
                 // for (int i = 0; i < CONFIG_WP_DATA_RX_LENGTH; i++)

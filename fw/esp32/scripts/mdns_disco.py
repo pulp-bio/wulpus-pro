@@ -7,7 +7,7 @@ import sys
 import socket
 import json
 
-from wulpus.finder import WulpusServiceFinder
+from wulpus.scanner import WulpusScanner
 
 
 message = None
@@ -43,10 +43,9 @@ if __name__ == "__main__":
     if argument_2:
         message = sys.argv[2]
 
-    finder = WulpusServiceFinder(service_type)
+    finder = WulpusScanner(service_type)
     print(f"Finding service '{service_type}'")
-    finder.find()
-    devices = finder.get_devices()
+    devices = finder.find()
     print(f"Found {len(devices)} devices")
 
     with open("devices.json", "w") as f:
