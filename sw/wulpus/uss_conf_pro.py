@@ -213,7 +213,7 @@ class WulpusProUssConfig:
             return
 
         # Calculate the time when the TGC linear slope gets activated
-        inflection_id = np.int(
+        inflection_id = int(
             (self.start_hvmuxrx - self.start_adcsampl + VGA_RC_EN_DELAY_US)
             / 1e6
             * self.sampling_freq
